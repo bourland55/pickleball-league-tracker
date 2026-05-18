@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// ============================================================
+//  Firestore Security Rules — Weekly Games Template
+//
+//  Model: client-side HTML app using anonymous Firebase auth.
+//  Any visitor who loads the app gets an anonymous Firebase user
+//  on page load. Rules require request.auth != null so random
+//  scanners without your config get blocked.
+//
+//  These rules are deliberately permissive: anyone with a link
+//  to your app can read and write data. That's intentional for a
+//  small private league — the app's "admin password" is the only
+//  gate to destructive admin actions, and it's client-side only.
+//  Don't use this for anything where data confidentiality matters.
+//
+//  Apply these rules at:
+//    Firebase Console → Firestore → Rules → paste → Publish
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Must be a signed-in Firebase user (anonymous counts).
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Basic write-payload sanity — size cap + no deeply nested junk.
+    function saneWrite() {
+      return request.resource.size() < 50
+             && request.resource.data.keys().size() < 40;
+    }
+
+    // ---------- Weekly Games collections ----------
+    match /players/{id}      { allow read, write: if signedIn() && (request.method == 'get' || request.method == 'list' || saneWrite()); }
+    match /weeks/{id}        { allow read, write: if signedIn() && (request.method == 'get' || request.method == 'list' || saneWrite()); }
+    match /weekGroups/{id}   { allow read, write: if signedIn() && (request.method == 'get' || request.method == 'list' || saneWrite()); }
+    match /weekResults/{id}  { allow read, write: if signedIn() && (request.method == 'get' || request.method == 'list' || saneWrite()); }
+    match /scoreEdits/{id}   { allow read, write: if signedIn() && (request.method == 'get' || request.method == 'list' || saneWrite()); }
+    match /subRequests/{id}  { allow read, write: if signedIn() && (request.method == 'get' || request.method == 'list' || saneWrite()); }
+    match /config/{id}       { allow read, write: if signedIn() && (request.method == 'get' || request.method == 'list' || saneWrite()); }
+
+    // Catch-all: deny anything not explicitly listed above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

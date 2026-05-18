@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Games</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="config.js"></script>
+    <style>
+        :root {
+            /* Brand color — set at runtime from LEAGUE_CONFIG.brandColor */
+            --brand:#22c55e;
+            --brand-dark:#16a34a;
+            --brand-bg-soft:rgba(34,197,94,0.15);
+            --brand-border-soft:rgba(34,197,94,0.3);
+
+            --bg-body:#0f172a; --bg-card:#1e293b; --bg-deep:#0f172a;
+            --border:#334155; --border-input:#475569;
+            --text:#fff; --text-secondary:#cbd5e1; --text-muted:#94a3b8; --text-dim:#64748b; --text-label:#475569;
+            --shadow:0 2px 12px rgba(0,0,0,0.4);
+            --header-from:#0f172a; --header-to:#1e293b;
+            --row-alt:rgba(255,255,255,0.02);
+            --sticky-bg:#0f172a; --sticky-bg-alt:#1a2436;
+        }
+        :root.light {
+            --bg-body:#f1f5f9; --bg-card:#ffffff; --bg-deep:#f1f5f9;
+            --border:#e2e8f0; --border-input:#cbd5e1;
+            --text:#0f172a; --text-secondary:#334155; --text-muted:#64748b; --text-dim:#94a3b8; --text-label:#94a3b8;
+            --shadow:0 2px 12px rgba(0,0,0,0.06);
+            --header-from:#ffffff; --header-to:#f8fafc;
+            --row-alt:rgba(0,0,0,0.03);
+            --sticky-bg:#f1f5f9; --sticky-bg-alt:#f8fafc;
+        }
+        :root.cyberpunk {
+            --brand:#ff00aa;
+            --brand-dark:#cc0088;
+            --brand-bg-soft:rgba(255,0,170,0.18);
+            --brand-border-soft:rgba(255,0,170,0.45);
+            --bg-body:#05010f; --bg-card:rgba(11,0,36,0.85); --bg-deep:#0b0024;
+            --border:rgba(255,0,170,0.35); --border-input:#5b1f80;
+            --text:#e4f4ff; --text-secondary:#c4b6e8; --text-muted:#9d8acc; --text-dim:#7d6ba8; --text-label:#ff00aa;
+            --shadow:0 0 24px rgba(255,0,170,0.20);
+            --header-from:#0b0024; --header-to:#1a0030;
+            --row-alt:rgba(255,0,170,0.04);
+            --sticky-bg:#0b0024; --sticky-bg-alt:#1a0030;
+        }
+        :root.cyberpunk body {
+            background:
+                radial-gradient(ellipse at top left, rgba(255,0,170,0.10) 0%, transparent 40%),
+                radial-gradient(ellipse at bottom right, rgba(0,240,255,0.08) 0%, transparent 40%),
+                var(--bg-body) !important;
+        }
+        :root.cyberpunk h1, :root.cyberpunk .text-green-400 {
+            text-shadow:0 0 8px var(--brand);
+        }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg-body); transition:background 0.3s; }
+        .card { background:var(--bg-card); border-radius:0.75rem; border:1px solid var(--border); box-shadow:var(--shadow); }
+        .nav-active { border-bottom:3px solid var(--brand); color:var(--brand); font-weight:600; }
+        .input-dark { background:var(--bg-deep); border:1px solid var(--border-input); color:var(--text); border-radius:0.75rem; padding:0.625rem 1rem; font-size:0.875rem; width:100%; outline:none; transition:border-color 0.15s; }
+        .input-dark:focus { border-color:var(--brand); }
+        .input-dark::placeholder { color:var(--text-dim); }
+        select.input-dark option { background:var(--bg-card); color:var(--text); }
+        .btn-primary { display:block; width:100%; background:var(--brand); color:#fff; font-weight:600; border-radius:0.75rem; padding:0.625rem 1rem; font-size:0.875rem; transition:background 0.15s; cursor:pointer; text-align:center; border:none; }
+        .btn-primary:hover { background:var(--brand-dark); }
+        .btn-primary:disabled { opacity:0.6; cursor:not-allowed; }
+        .btn-outline { display:block; width:100%; border:1.5px solid var(--border-input); color:var(--text-muted); font-weight:600; border-radius:0.75rem; padding:0.5rem 1rem; font-size:0.875rem; transition:all 0.15s; cursor:pointer; background:transparent; text-align:center; }
+        .btn-outline:hover { border-color:var(--text-muted); color:var(--text); }
+        .btn-ghost { display:block; width:100%; color:var(--text-dim); font-size:0.875rem; padding:0.5rem; background:transparent; cursor:pointer; transition:color 0.15s; border:none; text-align:center; }
+        .btn-ghost:hover { color:var(--text-secondary); }
+        .section-label { font-size:0.7rem; font-weight:700; color:var(--text-label); text-transform:uppercase; letter-spacing:0.08em; }
+        .badge-gold  { background:rgba(245,158,11,0.15);  color:#fbbf24; border:1px solid rgba(245,158,11,0.3);  border-radius:9999px; padding:0.125rem 0.5rem; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+        .badge-blue  { background:rgba(96,165,250,0.15);  color:#60a5fa; border:1px solid rgba(96,165,250,0.3);  border-radius:9999px; padding:0.125rem 0.5rem; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+        .badge-green { background:var(--brand-bg-soft); color:var(--brand); border:1px solid var(--brand-border-soft); border-radius:9999px; padding:0.125rem 0.5rem; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+        .badge-red   { background:rgba(248,113,113,0.15); color:#f87171; border:1px solid rgba(248,113,113,0.3); border-radius:9999px; padding:0.125rem 0.5rem; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+        .badge-amber { background:rgba(251,191,36,0.15);  color:#fbbf24; border:1px solid rgba(251,191,36,0.3);  border-radius:9999px; padding:0.125rem 0.5rem; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+        .badge-gray  { background:rgba(100,116,139,0.15); color:var(--text-muted); border:1px solid rgba(100,116,139,0.3); border-radius:9999px; padding:0.125rem 0.5rem; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+        .shutout { color:#ef4444 !important; }
+        :root.light .text-white { color:var(--text) !important; }
+        :root.light .text-slate-300 { color:#475569 !important; }
+        :root.light .text-slate-400 { color:#64748b !important; }
+        :root.light .bg-black\/70 { background-color:rgba(0,0,0,0.4) !important; }
+        :root.light .border-slate-700 { border-color:var(--border) !important; }
+        :root.light .border-slate-600 { border-color:var(--border) !important; }
+        #theme-toggle { background:none; border:1.5px solid var(--brand); color:var(--brand); border-radius:0.5rem; padding:0.35rem 0.5rem; font-size:0.9rem; cursor:pointer; line-height:1; }
+    </style>
+    <script>
+        try {
+            const t = localStorage.getItem('bbpl-theme');
+            if (t === 'light' || t === 'cyberpunk') document.documentElement.classList.add(t);
+        } catch(e) {}
+    </script>
+</head>
+<body class="min-h-screen">
+
+<header style="background:linear-gradient(135deg,var(--header-from) 0%,var(--header-to) 100%);border-bottom:2px solid var(--brand);box-shadow:var(--shadow);">
+    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <img id="hdr-logo" src="" alt="" style="height:36px;width:auto;display:none;">
+            <div>
+                <h1 id="hdr-league" class="text-lg font-black text-white tracking-tight">League</h1>
+                <p id="hdr-subtitle" class="text-xs tracking-widest uppercase font-semibold" style="color:var(--brand);">Subtitle</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <div id="hdr-links" class="flex items-center gap-2"></div>
+            <button id="theme-toggle" onclick="toggleTheme()" title="Switch theme">&#9728;</button>
+        </div>
+    </div>
+</header>
+
+<nav style="background:var(--bg-card);border-bottom:1px solid var(--border);" class="sticky top-0 z-10">
+    <div class="max-w-3xl mx-auto px-4 flex overflow-x-auto">
+        <button class="nav-btn whitespace-nowrap py-3 px-4 text-sm text-slate-400 hover:text-green-400 transition-colors" data-view="this-week"   onclick="setView('this-week')">This Week</button>
+        <button class="nav-btn whitespace-nowrap py-3 px-4 text-sm text-slate-400 hover:text-green-400 transition-colors" data-view="courts"     onclick="setView('courts')">Courts</button>
+        <button class="nav-btn whitespace-nowrap py-3 px-4 text-sm text-slate-400 hover:text-green-400 transition-colors" data-view="leaderboard" onclick="setView('leaderboard')">Leaderboard</button>
+        <button class="nav-btn whitespace-nowrap py-3 px-4 text-sm text-slate-400 hover:text-green-400 transition-colors" data-view="season"      onclick="setView('season')">Season</button>
+        <button class="nav-btn whitespace-nowrap py-3 px-4 text-sm text-slate-400 hover:text-green-400 transition-colors" data-view="admin"       onclick="setView('admin')">Admin</button>
+    </div>
+</nav>
+
+<main class="max-w-3xl mx-auto px-4 py-6">
+    <div id="view-this-week"></div>
+    <div id="view-courts"     class="hidden"></div>
+    <div id="view-leaderboard" class="hidden"></div>
+    <div id="view-season"     class="hidden"></div>
+    <div id="view-admin"      class="hidden"></div>
+</main>
+
+<!-- MODAL: Score Entry -->
+<div id="modal-score" class="hidden fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4">
+    <div class="card w-full max-w-sm" style="border-color:var(--border-input);">
+        <div class="p-5 border-b border-slate-700">
+            <p class="section-label mb-0.5" id="score-series-label"></p>
+            <h2 class="text-sm font-black text-white" id="score-game-label"></h2>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <p class="section-label mb-2">Who won?</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="score-t1-btn" onclick="selectWinner('t1')" class="py-3 px-2 rounded-xl border-2 border-slate-600 text-slate-400 text-xs font-bold leading-tight transition-colors"></button>
+                    <button id="score-t2-btn" onclick="selectWinner('t2')" class="py-3 px-2 rounded-xl border-2 border-slate-600 text-slate-400 text-xs font-bold leading-tight transition-colors"></button>
+                </div>
+            </div>
+            <div id="score-losing-wrap" class="hidden">
+                <p class="section-label mb-2">Losing score (0 – 10)</p>
+                <div class="grid grid-cols-6 gap-1.5" id="score-losing-grid"></div>
+            </div>
+            <div id="score-reason-wrap" class="hidden">
+                <p class="section-label mb-2">Reason for edit <span class="text-red-400">*</span></p>
+                <input id="score-reason-input" type="text" placeholder="e.g. Wrong score recorded, scorekeeper error" class="input-dark" />
+            </div>
+            <p id="score-error" class="text-red-400 text-xs hidden"></p>
+        </div>
+        <div class="p-4 border-t border-slate-700 space-y-2">
+            <button id="score-confirm-btn" onclick="submitScore()" class="hidden btn-primary">Submit Score</button>
+            <button onclick="closeModal('modal-score')" class="btn-ghost">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Admin Login -->
+<div id="modal-admin-login" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div class="card w-full max-w-sm p-6" style="border-color:var(--border-input);">
+        <h2 class="text-base font-bold text-white mb-4">Admin Login</h2>
+        <input id="admin-pwd" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')attemptLogin()" class="input-dark mb-2" />
+        <p id="admin-pwd-err" class="text-red-400 text-xs mb-3 hidden">Incorrect password.</p>
+        <button onclick="attemptLogin()" class="btn-primary mb-2">Login</button>
+        <button onclick="closeModal('modal-admin-login')" class="btn-ghost">Cancel</button>
+    </div>
+</div>
+
+<!-- MODAL: Lock Week Confirm -->
+<!-- MODAL: Nuke Confirm -->
+<div id="modal-nuke-confirm" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div class="card w-full max-w-sm p-6" style="border-color:var(--border-input);">
+        <h2 class="text-base font-bold text-white mb-2">Nuke All Data?</h2>
+        <p class="text-sm text-slate-400 mb-4">Permanently deletes all players, weeks, scores, and sub requests. <span class="text-red-400">Cannot be undone.</span></p>
+        <button onclick="nukeAllData()" class="w-full py-2.5 rounded-xl text-sm font-bold mb-2 transition-colors" style="background:rgba(239,68,68,0.15);border:1.5px solid rgba(239,68,68,0.5);color:#f87171;">Yes, Delete Everything</button>
+        <button onclick="closeModal('modal-nuke-confirm')" class="btn-ghost">Cancel</button>
+    </div>
+</div>
+
+<div id="modal-lock-confirm" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div class="card w-full max-w-sm p-6" style="border-color:var(--border-input);">
+        <h2 class="text-base font-bold text-white mb-2">Lock In Week?</h2>
+        <p class="text-sm text-slate-400 mb-4">This makes the week live. <span class="text-amber-400">Cannot be undone.</span></p>
+        <div id="lock-summary" class="rounded-xl p-3 mb-4 space-y-1 text-sm" style="background:var(--bg-deep);"></div>
+        <button onclick="lockWeek()" class="btn-primary mb-2">Lock In Week</button>
+        <button onclick="closeModal('modal-lock-confirm')" class="btn-ghost">Cancel</button>
+    </div>
+</div>
+
+<script>
+// ================================================================
+//  CONFIG — read from window.LEAGUE_CONFIG (set in config.js)
+// ================================================================
+const CFG = window.LEAGUE_CONFIG || {};
+if (!window.LEAGUE_CONFIG) {
+    // No config.js found — show a friendly setup message instead of crashing.
+    document.body.innerHTML = `
+        <div style="max-width:560px;margin:80px auto;padding:32px;background:#1e293b;color:#fff;border-radius:12px;border:1px solid #334155;font-family:system-ui;line-height:1.6;">
+            <h1 style="font-size:1.5rem;margin-bottom:12px;color:#22c55e;">Setup needed</h1>
+            <p style="margin-bottom:16px;">Copy <code style="background:#0f172a;padding:2px 6px;border-radius:4px;">config.example.js</code> to <code style="background:#0f172a;padding:2px 6px;border-radius:4px;">config.js</code> and edit your league details.</p>
+            <p style="font-size:0.9rem;color:#94a3b8;">Or open this folder in Claude Code and say "let's get started" — the wizard handles everything.</p>
+        </div>`;
+    throw new Error('LEAGUE_CONFIG not found. Copy config.example.js to config.js.');
+}
+
+const ADMIN_PASSWORD = CFG.adminPassword || 'changeme';
+const COURT_ORDER    = [6,5,4,3,2,1,7,8,9,10];
+const SERIES_DEF     = [
+    { num:1, team1:[1,2], team2:[3,4] },
+    { num:2, team1:[1,3], team2:[2,4] },
+    { num:3, team1:[1,4], team2:[2,3] },
+];
+const WIN_SCORE      = CFG.winningScore || 11;
+const PICKLE_SCORE   = CFG.pickleScore || 0;
+
+// ─── Apply branding ─────────────────────────────────────────────
+(function applyBranding() {
+    document.title = `${CFG.leagueName} — ${CFG.subtitle || 'Weekly Games'}`;
+    const root = document.documentElement.style;
+    if (CFG.brandColor)     root.setProperty('--brand', CFG.brandColor);
+    if (CFG.brandColorDark) root.setProperty('--brand-dark', CFG.brandColorDark);
+    if (CFG.brandColor) {
+        // Derive soft/border RGBA from brand for badge backgrounds
+        const hex = CFG.brandColor.replace('#','');
+        const r = parseInt(hex.substring(0,2),16), g = parseInt(hex.substring(2,4),16), b = parseInt(hex.substring(4,6),16);
+        if (!isNaN(r)) {
+            root.setProperty('--brand-bg-soft',     `rgba(${r},${g},${b},0.15)`);
+            root.setProperty('--brand-border-soft', `rgba(${r},${g},${b},0.3)`);
+        }
+    }
+    const hdr  = document.getElementById('hdr-league');   if (hdr)  hdr.textContent  = (CFG.leagueName || 'League').toUpperCase();
+    const subE = document.getElementById('hdr-subtitle'); if (subE) subE.textContent = `${CFG.sport || ''} — ${CFG.subtitle || 'Weekly Games'}`.replace(/^ — /,'');
+    const logo = document.getElementById('hdr-logo');
+    if (logo && CFG.logoSrc) {
+        logo.src = CFG.logoSrc;
+        logo.alt = CFG.logoAlt || 'Logo';
+        logo.onload = () => { logo.style.display = 'block'; };
+        logo.onerror = () => { logo.style.display = 'none'; };
+    }
+    const links = document.getElementById('hdr-links');
+    if (links && Array.isArray(CFG.externalLinks)) {
+        CFG.externalLinks.forEach(l => {
+            if (!l?.url || !l?.label) return;
+            const a = document.createElement('a');
+            a.href = l.url; a.target = '_blank'; a.textContent = l.label;
+            a.style.cssText = 'text-decoration:none;border:1.5px solid var(--brand);color:var(--brand);border-radius:0.5rem;padding:0.35rem 0.75rem;font-size:0.75rem;font-weight:600;white-space:nowrap;';
+            links.appendChild(a);
+        });
+    }
+})();
+
+// ================================================================
+//  STORAGE — Firebase (multi-user) or local (single-device) adapter
+// ================================================================
+let db, authReady;
+const STORAGE_MODE = CFG.storageMode === 'firebase' ? 'firebase' : 'local';
+
+if (STORAGE_MODE === 'firebase') {
+    if (!CFG.firebaseConfig?.projectId) {
+        alert('Firebase mode is selected but firebaseConfig is missing. Run "let\'s get started" in Claude Code or edit config.js.');
+        throw new Error('firebaseConfig missing');
+    }
+    firebase.initializeApp(CFG.firebaseConfig);
+    db = firebase.firestore();
+    authReady = firebase.auth().signInAnonymously()
+        .catch(err => console.error('Anonymous sign-in failed:', err));
+} else {
+    // ─── LOCAL STORAGE SHIM ─────────────────────────────────────
+    // In-memory Firestore-compat shim backed by localStorage + cross-tab
+    // BroadcastChannel sync. Single-device only. Same surface as Firestore
+    // so the rest of the app code doesn't need to know which mode is on.
+    const LS_KEY = 'bbpl-games-local-db';
+    const channel = ('BroadcastChannel' in window) ? new BroadcastChannel('bbpl-games-local-db') : null;
+    const SERVER_TS = '__SERVER_TS__';
+    const TS = () => ({ toMillis: function() { return this._ms; }, _ms: Date.now(), toDate: function(){ return new Date(this._ms); } });
+
+    // Override Firestore globals so existing code keeps working
+    window.firebase = window.firebase || {};
+    window.firebase.firestore = window.firebase.firestore || function() { return db; };
+    window.firebase.firestore.FieldValue = { serverTimestamp: () => SERVER_TS };
+    window.firebase.firestore.Timestamp  = { now: TS, fromDate: (d) => { const t = TS(); t._ms = d.getTime(); return t; } };
+
+    let store = {};
+    try { store = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(e) { store = {}; }
+
+    function save() {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch(e) {}
+        notifyAll();
+    }
+    function broadcast(payload) {
+        if (channel) try { channel.postMessage(payload); } catch(e) {}
+    }
+    function genId() { return 'l_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+    function resolveSentinels(data) {
+        const out = {};
+        for (const k in data) {
+            if (data[k] === SERVER_TS) out[k] = TS();
+            else if (data[k] && typeof data[k] === 'object' && !Array.isArray(data[k]) && data[k]._ms === undefined) {
+                out[k] = resolveSentinels(data[k]);
+            } else out[k] = data[k];
+        }
+        return out;
+    }
+    function reviveTimestamps(data) {
+        // Walk loaded JSON and re-hydrate {_ms:...} into proper TS-like objects with methods
+        if (Array.isArray(data)) return data.map(reviveTimestamps);
+        if (data && typeof data === 'object') {
+            if (typeof data._ms === 'number' && Object.keys(data).length === 1) {
+                const t = TS(); t._ms = data._ms; return t;
+            }
+            const out = {};
+            for (const k in data) out[k] = reviveTimestamps(data[k]);
+            return out;
+        }
+        return data;
+    }
+    // Rehydrate on load
+    for (const col in store) {
+        for (const id in store[col]) store[col][id] = reviveTimestamps(store[col][id]);
+    }
+
+    // ─── Listener registry ─────────────────────────────────
+    const listeners = [];  // { id, collectionName, filter, sort, cb }
+    function notifyAll() {
+        listeners.forEach(L => { try { L.cb(buildSnapshot(L)); } catch(e) { console.error(e); } });
+    }
+    function buildSnapshot(L) {
+        const col = store[L.collectionName] || {};
+        let docs = Object.entries(col).map(([id,data]) => ({ id, data: () => ({...data}), exists: true, ref: { id } }));
+        if (L.filter) {
+            const [f, op, v] = L.filter;
+            docs = docs.filter(d => {
+                const dv = d.data()[f];
+                if (op === '==') return dv === v;
+                if (op === '!=') return dv !== v;
+                if (op === '>')  return dv > v;
+                if (op === '<')  return dv < v;
+                if (op === '>=') return dv >= v;
+                if (op === '<=') return dv <= v;
+                return true;
+            });
+        }
+        if (L.sort) {
+            const [f, dir] = L.sort;
+            docs.sort((a,b) => {
+                const av = a.data()[f], bv = b.data()[f];
+                const am = av?._ms ?? av, bm = bv?._ms ?? bv;
+                if (am < bm) return dir === 'desc' ? 1 : -1;
+                if (am > bm) return dir === 'desc' ? -1 : 1;
+                return 0;
+            });
+        }
+        return { docs, empty: docs.length === 0, size: docs.length, forEach: cb => docs.forEach(cb) };
+    }
+    function buildDocSnapshot(col, id) {
+        const data = store[col]?.[id];
+        return {
+            id, exists: !!data,
+            data: () => data ? {...data} : undefined,
+            ref: { id }
+        };
+    }
+    if (channel) channel.onmessage = (e) => {
+        // Another tab updated — reload from localStorage and notify
+        try { store = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(err) {}
+        for (const col in store) {
+            for (const id in store[col]) store[col][id] = reviveTimestamps(store[col][id]);
+        }
+        notifyAll();
+    };
+
+    // ─── API surface ───────────────────────────────────────
+    function makeDocRef(colName, id) {
+        return {
+            id,
+            set: async (data, options) => {
+                store[colName] = store[colName] || {};
+                if (options?.merge) {
+                    store[colName][id] = { ...(store[colName][id] || {}), ...resolveSentinels(data) };
+                } else {
+                    store[colName][id] = resolveSentinels(data);
+                }
+                save(); broadcast({});
+            },
+            update: async (patch) => {
+                store[colName] = store[colName] || {};
+                store[colName][id] = { ...(store[colName][id] || {}), ...resolveSentinels(patch) };
+                save(); broadcast({});
+            },
+            delete: async () => {
+                if (store[colName]) delete store[colName][id];
+                save(); broadcast({});
+            },
+            get: async () => buildDocSnapshot(colName, id),
+            onSnapshot: (cb) => {
+                const L = {
+                    id: genId(), collectionName: colName, filter: ['__id__','==',id],
+                    cb: () => cb(buildDocSnapshot(colName, id))
+                };
+                listeners.push(L);
+                cb(buildDocSnapshot(colName, id));
+                return () => {
+                    const i = listeners.indexOf(L);
+                    if (i >= 0) listeners.splice(i,1);
+                };
+            }
+        };
+    }
+    function makeQuery(colName, filter, sort) {
+        return {
+            where: (f, op, v) => makeQuery(colName, [f, op, v], sort),
+            orderBy: (f, dir = 'asc') => makeQuery(colName, filter, [f, dir]),
+            get: async () => buildSnapshot({ collectionName: colName, filter, sort }),
+            onSnapshot: (cb) => {
+                const L = { id: genId(), collectionName: colName, filter, sort, cb };
+                listeners.push(L);
+                cb(buildSnapshot(L));
+                return () => {
+                    const i = listeners.indexOf(L);
+                    if (i >= 0) listeners.splice(i,1);
+                };
+            }
+        };
+    }
+    function makeCollection(name) {
+        return {
+            doc: (id) => makeDocRef(name, id || genId()),
+            add: async (data) => {
+                const id = genId();
+                store[name] = store[name] || {};
+                store[name][id] = resolveSentinels(data);
+                save(); broadcast({});
+                return { id };
+            },
+            where: (f, op, v) => makeQuery(name, [f, op, v]),
+            orderBy: (f, dir = 'asc') => makeQuery(name, null, [f, dir]),
+            get: async () => buildSnapshot({ collectionName: name }),
+            onSnapshot: (cb) => {
+                const L = { id: genId(), collectionName: name, cb };
+                listeners.push(L);
+                cb(buildSnapshot(L));
+                return () => {
+                    const i = listeners.indexOf(L);
+                    if (i >= 0) listeners.splice(i,1);
+                };
+            }
+        };
+    }
+    function makeBatch() {
+        const ops = [];
+        return {
+            set: (ref, data, options) => { ops.push({ type:'set', ref, data, options }); },
+            update: (ref, data) => { ops.push({ type:'update', ref, data }); },
+            delete: (ref) => { ops.push({ type:'delete', ref }); },
+            commit: async () => {
+                for (const op of ops) {
+                    if (op.type === 'set') {
+                        if (op.options?.merge) await op.ref.update(op.data);
+                        else await op.ref.set(op.data);
+                    } else if (op.type === 'update') await op.ref.update(op.data);
+                    else if (op.type === 'delete') await op.ref.delete();
+                }
+            }
+        };
+    }
+    async function runTransaction(fn) {
+        // Local "transaction" — no isolation guarantee, but matches the API
+        const tx = {
+            get: (ref) => ref.get(),
+            set: (ref, data) => ref.set(data),
+            update: (ref, data) => ref.update(data),
+            delete: (ref) => ref.delete()
+        };
+        return await fn(tx);
+    }
+
+    db = {
+        collection: makeCollection,
+        batch: makeBatch,
+        runTransaction
+    };
+    authReady = Promise.resolve();
+}
+
+// ================================================================
+//  STATE
+// ================================================================
+let isAdmin     = false;
+let currentView = 'this-week';
+let courtViewId = null;   // groupDocId being viewed in Courts tab
+
+let players      = [];
+let activeWeek   = null;
+let seasonConfig = {}; // tracks currentWeek number across sessions
+let weekGroups   = [];
+let subRequests  = [];
+let weekResults  = []; // saved snapshots of completed weeks
+let leagueSettings = { absencePenaltyThreshold: 1, absencePenaltyPerOccurrence: -10 };
+let scoreEdits   = []; // audit trail for score corrections
+
+// Listeners that need cleanup on week change
+let unsubGroups = null, unsubSubs = null, listenedWeekId = null;
+let pendingWeekNum = null; // persists admin's typed week number across re-renders
+
+// Score modal draft
+let scoreDraft = { groupId:null, sIdx:null, gIdx:null, winner:null, losing:null };
+
+// Admin setup state
+let setup = { step:null, absentIds:new Set(), subIds:new Set(), roster:[], groups:[] };
+
+// ================================================================
+//  FIRESTORE LISTENERS
+// ================================================================
+function startListeners() {
+    db.collection('players').orderBy('name').onSnapshot(snap => {
+        players = snap.docs.map(d => ({id:d.id,...d.data()}));
+        renderCurrentView();
+    });
+    db.collection('config').doc('season').onSnapshot(snap => {
+        if (snap.exists) seasonConfig = snap.data();
+        renderCurrentView();
+    });
+
+    db.collection('weekResults').orderBy('weekNumber').onSnapshot(snap => {
+        weekResults = snap.docs.map(d => ({id:d.id,...d.data()}));
+        renderCurrentView();
+    });
+
+    db.collection('config').doc('leagueSettings').onSnapshot(snap => {
+        if (snap.exists) leagueSettings = { ...leagueSettings, ...snap.data() };
+    });
+
+    db.collection('scoreEdits').orderBy('editedAt','desc').onSnapshot(snap => {
+        scoreEdits = snap.docs.map(d => ({id:d.id,...d.data()}));
+    });
+
+    db.collection('weeks').orderBy('createdAt','desc').onSnapshot(snap => {
+        const all = snap.docs.map(d => ({id:d.id,...d.data()}));
+        activeWeek = all.find(w => w.status === 'setup' || w.status === 'active') || null;
+
+        const wid = activeWeek?.id || null;
+        if (wid !== listenedWeekId) {
+            listenedWeekId = wid;
+            if (unsubGroups) { unsubGroups(); unsubGroups = null; }
+            if (unsubSubs)   { unsubSubs();   unsubSubs   = null; }
+            if (wid) {
+                unsubGroups = db.collection('weekGroups').where('weekId','==',wid)
+                    .onSnapshot(s => {
+                        weekGroups = s.docs.map(d => ({id:d.id,...d.data()}))
+                                           .sort((a,b)=>a.groupIndex-b.groupIndex);
+                        renderCurrentView();
+                    });
+                unsubSubs = db.collection('subRequests').where('weekId','==',wid)
+                    .onSnapshot(s => {
+                        subRequests = s.docs.map(d => ({id:d.id,...d.data()}));
+                        renderCurrentView();
+                    });
+            } else {
+                weekGroups = []; subRequests = [];
+            }
+        }
+        renderCurrentView();
+    });
+}
+
+// ================================================================
+//  NAVIGATION
+// ================================================================
+function setView(v) {
+    if (v !== 'courts') courtViewId = null;
+    currentView = v;
+    ['this-week','courts','leaderboard','season','admin'].forEach(x =>
+        document.getElementById(`view-${x}`).classList.toggle('hidden', x !== v));
+    document.querySelectorAll('.nav-btn').forEach(b =>
+        b.classList.toggle('nav-active', b.dataset.view === v));
+    renderCurrentView();
+}
+
+function renderCurrentView() {
+    switch(currentView) {
+        case 'this-week':    renderThisWeek();    break;
+        case 'courts':       renderCourts();      break;
+        case 'leaderboard':  renderLeaderboard(); break;
+        case 'season':       renderSeason();      break;
+        case 'admin':        renderAdmin();       break;
+    }
+}
+
+// ================================================================
+//  VIEW: THIS WEEK
+// ================================================================
+function renderThisWeek() {
+    const el = document.getElementById('view-this-week');
+    if (!activeWeek) {
+        el.innerHTML = `<div class="card p-8 text-center">
+            <p class="font-bold text-white mb-1">No active week</p>
+            <p class="text-sm text-slate-400">The admin will set up this week's games soon.</p>
+        </div>`; return;
+    }
+
+    const isActive = activeWeek.status === 'active';
+    const done = weekGroups.filter(g=>g.status==='complete').length;
+    const total = weekGroups.length;
+
+    const subHtml = subRequests.length === 0 ? '' : `
+        <h2 class="section-label mb-2">Sub Requests — Week ${activeWeek.weekNumber}</h2>
+        <div class="card p-4 mb-5 space-y-2">
+            ${subRequests.map(s=>`
+                <div class="flex items-start gap-3">
+                    <span class="badge-amber shrink-0">SUB</span>
+                    <div><span class="text-sm font-semibold text-white">${s.playerName}</span>
+                    <span class="text-sm text-slate-400 ml-1">— ${s.reason}</span></div>
+                </div>`).join('')}
+        </div>`;
+
+    const courtsHtml = !isActive ? `
+        <div class="card p-6 text-center">
+            <p class="text-amber-400 font-semibold text-sm mb-1">Setup in progress</p>
+            <p class="text-slate-400 text-sm">The admin is finalizing the lineup. Check back soon!</p>
+        </div>` : `
+        <h2 class="section-label mb-3">Court Assignments</h2>
+        <div class="space-y-2">
+            ${[...weekGroups].sort((a,b)=>a.groupIndex-b.groupIndex).map(g => {
+                const badge = g.status==='complete' ? `<span class="badge-green">Done</span>` :
+                              g.status==='active'   ? `<span class="badge-amber">Playing</span>` :
+                              `<span class="badge-gray">Pending</span>`;
+                const allN = g.players.map(p=>p.name);
+                const names = g.players.map(p=>lastShortName(p.name,allN)).join(', ');
+                return `<button onclick="openCourt('${g.id}')" class="card w-full text-left p-4 hover:border-green-500/40 transition-colors" style="border-color:var(--border);">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="text-xl font-black text-green-400 w-10">C${g.court}</div>
+                            <div>
+                                <div class="text-sm font-semibold text-white">${names}</div>
+                                <div class="text-xs text-slate-500">Ranks ${g.players[0].rank}–${g.players[g.players.length-1].rank}</div>
+                            </div>
+                        </div>
+                        ${badge}
+                    </div>
+                </button>`;
+            }).join('')}
+        </div>`;
+
+    el.innerHTML = `
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h1 class="text-2xl font-black text-white">Week ${activeWeek.weekNumber}</h1>
+                ${isActive ? `<p class="text-xs text-green-400 font-semibold mt-0.5">${done}/${total} courts complete</p>` : `<p class="text-xs text-amber-400 font-semibold mt-0.5">Lineup being set</p>`}
+            </div>
+        </div>
+        ${subHtml}
+        ${courtsHtml}`;
+}
+
+// ================================================================
+//  VIEW: COURTS
+// ================================================================
+function renderCourts() {
+    const el = document.getElementById('view-courts');
+    if (courtViewId) {
+        const g = weekGroups.find(x=>x.id===courtViewId);
+        if (g) { renderCourtDetail(el, g); return; }
+    }
+    if (!activeWeek || activeWeek.status !== 'active' || weekGroups.length === 0) {
+        el.innerHTML = emptyState('No active week','Courts will appear here once the week is locked in.'); return;
+    }
+    const sorted = [...weekGroups].sort((a,b)=>a.court-b.court);
+    el.innerHTML = `
+        <h2 class="section-label mb-3">Select Your Court</h2>
+        <div class="grid grid-cols-2 gap-3">
+            ${sorted.map(g => {
+                const color = g.status==='complete'?'var(--brand)':g.status==='active'?'#fbbf24':'var(--text-label)';
+                const avail = g.series.reduce((n,s)=>n+s.games.filter(x=>x.available).length,0);
+                const done  = g.series.reduce((n,s)=>n+s.games.filter(x=>x.available&&x.t1Score!==null).length,0);
+                return `<button onclick="openCourt('${g.id}')" class="card p-5 text-center hover:border-green-500/40 transition-colors" style="border-color:var(--border);">
+                    <div class="text-3xl font-black mb-1" style="color:${color}">C${g.court}</div>
+                    <div class="text-xs text-slate-400">Ranks ${g.players[0].rank}–${g.players[g.players.length-1].rank}</div>
+                    <div class="text-xs text-slate-500 mt-1">${done}/${avail} games</div>
+                </button>`;
+            }).join('')}
+        </div>`;
+}
+
+function openCourt(id) { courtViewId = id; setView('courts'); }
+
+function renderCourtDetail(el, g) {
+    const avail = g.series.reduce((n,s)=>n+s.games.filter(x=>x.available).length,0);
+    const done  = g.series.reduce((n,s)=>n+s.games.filter(x=>x.available&&x.t1Score!==null).length,0);
+    const badge = g.status==='complete'?`<span class="badge-green">Complete</span>`:
+                  g.status==='active'  ?`<span class="badge-amber">In Progress</span>`:
+                  `<span class="badge-gray">Pending</span>`;
+
+    el.innerHTML = `
+        <div class="flex items-center gap-3 mb-5">
+            <button onclick="courtViewId=null;renderCourts()" class="text-slate-400 hover:text-white text-2xl leading-none">&larr;</button>
+            <div class="flex-1">
+                <div class="flex items-center gap-2"><h2 class="text-xl font-black text-white">Court ${g.court}</h2>${badge}</div>
+                <p class="text-xs text-slate-400">${done}/${avail} games complete</p>
+            </div>
+        </div>
+        <div class="card p-4 mb-4">
+            <p class="section-label mb-2">Players</p>
+            <div class="grid grid-cols-2 gap-2">
+                ${g.players.map(p=>`
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-black text-green-400 w-4">${p.position}</span>
+                        <div>
+                            <div class="text-sm font-semibold text-white">${p.name}</div>
+                            <div class="text-xs text-slate-500">Rank ${p.rank}${p.isSub?' · Sub':''}</div>
+                        </div>
+                    </div>`).join('')}
+            </div>
+        </div>
+        <div class="space-y-4">
+            ${g.series.map((s,si)=>seriesCard(g,s,si)).join('')}
+        </div>`;
+}
+
+function seriesCard(g, s, si) {
+    const allN = g.players.map(p=>p.name);
+    const t1Names = s.team1.map(pos=>g.players.find(p=>p.position===pos)).map(p=>shortName(p?.name||'?',allN)).join('+');
+    const t2Names = s.team2.map(pos=>g.players.find(p=>p.position===pos)).map(p=>shortName(p?.name||'?',allN)).join('+');
+    const t1w = s.games.filter(gm=>gm.available&&gm.t1Score===11).length;
+    const t2w = s.games.filter(gm=>gm.available&&gm.t2Score===11).length;
+    const winBadge = t1w===2?`<span class="badge-green">${t1Names} Win</span>`:t2w===2?`<span class="badge-green">${t2Names} Win</span>`:'';
+
+    const gamesHtml = s.games.map((gm,gi)=>{
+        if (!gm.available) return `
+            <div class="flex items-center justify-between py-2 px-3 rounded-lg" style="background:var(--bg-deep);opacity:0.35;">
+                <span class="text-xs text-slate-500">Game ${gm.num}</span>
+                <span class="text-xs text-slate-600">Waiting…</span>
+            </div>`;
+        if (gm.t1Score===null) return `
+            <div class="flex items-center justify-between py-2 px-3 rounded-lg" style="background:var(--bg-deep);">
+                <span class="text-xs text-slate-400">Game ${gm.num}</span>
+                <button onclick="openScoreModal('${g.id}',${si},${gi})" class="text-xs font-semibold text-green-400 border border-green-500/40 px-3 py-1 rounded-lg hover:bg-green-500/10 transition-colors">Enter Score</button>
+            </div>`;
+        const t1won = gm.t1Score===11;
+        const shut  = gm.t1Score===0||gm.t2Score===0;
+        const sc    = shut?'shutout':'text-white';
+        return `
+            <div class="flex items-center justify-between py-2 px-3 rounded-lg" style="background:var(--bg-deep);">
+                <span class="text-xs text-slate-400">Game ${gm.num}</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-black ${sc} ${t1won?'':'opacity-40'}">${gm.t1Score}</span>
+                    <span class="text-slate-600 text-xs">—</span>
+                    <span class="text-sm font-black ${sc} ${!t1won?'':'opacity-40'}">${gm.t2Score}</span>
+                    <button onclick="openScoreModal('${g.id}',${si},${gi})" class="text-slate-600 hover:text-slate-300 text-xs ml-1 transition-colors">✎</button>
+                </div>
+            </div>`;
+    }).join('');
+
+    return `
+        <div class="card overflow-hidden">
+            <div class="px-4 py-3 flex items-center justify-between" style="border-bottom:1px solid var(--border);">
+                <div>
+                    <p class="section-label">Series ${s.num}</p>
+                    <p class="text-sm font-bold text-white mt-0.5">${t1Names} <span class="text-slate-500 font-normal">vs</span> ${t2Names}</p>
+                </div>
+                ${winBadge}
+            </div>
+            <div class="p-3 space-y-1.5">${gamesHtml}</div>
+        </div>`;
+}
+
+// ================================================================
+//  SCORE MODAL
+// ================================================================
+function openScoreModal(groupId, si, gi, weekId) {
+    // Find the group — check live weekGroups first, then loaded past groups
+    const g = weekGroups.find(x=>x.id===groupId) || loadedPastWeekGroups?.find(x=>x.id===groupId);
+    if (!g) return;
+    const s = g.series[si], gm = s.games[gi];
+
+    // Determine if this is a retroactive edit (past completed week)
+    const isRetroactive = !!weekId && (!activeWeek || weekId !== activeWeek.id);
+    const isReEntry = gm.t1Score !== null;
+    const previousScore = isReEntry ? { t1Score: gm.t1Score, t2Score: gm.t2Score } : null;
+
+    scoreDraft = { groupId, si, gi, winner:null, losing:null, weekId: weekId||activeWeek?.id, isRetroactive, previousScore, court: g.court };
+
+    const allN = g.players.map(x=>x.name);
+    const t1n = s.team1.map(p=>g.players.find(x=>x.position===p)).map(x=>shortName(x?.name||'?',allN)).join('+');
+    const t2n = s.team2.map(p=>g.players.find(x=>x.position===p)).map(x=>shortName(x?.name||'?',allN)).join('+');
+
+    document.getElementById('score-series-label').textContent = `Series ${s.num} · Game ${gm.num}${isRetroactive?' (Past Week)':''}`;
+    document.getElementById('score-game-label').textContent   = `${t1n}  vs  ${t2n}`;
+    document.getElementById('score-t1-btn').textContent = t1n;
+    document.getElementById('score-t2-btn').textContent = t2n;
+    ['score-t1-btn','score-t2-btn'].forEach(id=>{
+        const b=document.getElementById(id); b.style.borderColor='var(--border-input)'; b.style.background=''; b.style.color='var(--text-muted)';
+    });
+    document.getElementById('score-losing-wrap').classList.add('hidden');
+    document.getElementById('score-confirm-btn').classList.add('hidden');
+    document.getElementById('score-error').classList.add('hidden');
+
+    // Show/hide reason field
+    const reasonWrap = document.getElementById('score-reason-wrap');
+    const reasonInput = document.getElementById('score-reason-input');
+    if (isRetroactive || isReEntry) {
+        reasonWrap.classList.remove('hidden');
+        reasonInput.value = '';
+        reasonInput.required = isRetroactive;
+    } else {
+        reasonWrap.classList.add('hidden');
+        reasonInput.value = '';
+    }
+
+    // Pre-fill if editing
+    if (gm.t1Score!==null) { selectWinner(gm.t1Score===11?'t1':'t2'); selectLosing(Math.min(gm.t1Score,gm.t2Score)); }
+    showModal('modal-score');
+}
+
+function selectWinner(side) {
+    scoreDraft.winner = side; scoreDraft.losing = null;
+    const t1=document.getElementById('score-t1-btn'), t2=document.getElementById('score-t2-btn');
+    const win=side==='t1'?t1:t2, lose=side==='t1'?t2:t1;
+    win.style.cssText  = 'border-color:var(--brand);background:var(--brand-bg-soft);color:var(--brand);';
+    lose.style.cssText = 'border-color:var(--border-input);background:transparent;color:var(--text-muted);';
+
+    const grid = document.getElementById('score-losing-grid');
+    grid.innerHTML = [...Array(11).keys()].map(n=>
+        `<button id="ls${n}" onclick="selectLosing(${n})" class="py-2 rounded-lg text-sm font-bold transition-colors" style="border:1px solid var(--border-input);color:var(--text-muted);background:transparent;">${n}</button>`
+    ).join('');
+    document.getElementById('score-losing-wrap').classList.remove('hidden');
+    document.getElementById('score-confirm-btn').classList.add('hidden');
+}
+
+function selectLosing(n) {
+    scoreDraft.losing = n;
+    document.querySelectorAll('[id^="ls"]').forEach(b=>{b.style.background='transparent';b.style.color='var(--text-muted)';b.style.borderColor='var(--border-input)';});
+    const b=document.getElementById(`ls${n}`);
+    if(b){b.style.background='var(--brand)';b.style.color='white';b.style.borderColor='var(--brand)';}
+    document.getElementById('score-confirm-btn').classList.remove('hidden');
+}
+
+async function submitScore() {
+    const {groupId,si,gi,winner,losing,weekId,isRetroactive,previousScore,court} = scoreDraft;
+    if (winner===null||losing===null) return;
+    const t1Score = winner==='t1'?11:losing;
+    const t2Score = winner==='t2'?11:losing;
+    const reason  = document.getElementById('score-reason-input')?.value.trim() || '';
+    const errEl   = document.getElementById('score-error'); errEl.classList.add('hidden');
+
+    // Require reason for retroactive edits
+    if (isRetroactive && !reason) {
+        errEl.textContent = 'A reason is required for editing past scores.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    const btn = document.getElementById('score-confirm-btn'); btn.disabled=true; btn.textContent='Saving…';
+    try {
+        const ref = db.collection('weekGroups').doc(groupId);
+        await db.runTransaction(async tx => {
+            const doc = await tx.get(ref);
+            const d   = doc.data();
+            d.series[si].games[gi].t1Score = t1Score;
+            d.series[si].games[gi].t2Score = t2Score;
+            d.series[si] = recalcSeries(d.series[si]);
+            const anyScore = d.series.some(s=>s.games.some(gm=>gm.t1Score!==null));
+            const allDone  = d.series.every(s=>s.winner!==null);
+            d.status = allDone?'complete':anyScore?'active':'pending';
+            tx.update(ref,{series:d.series,status:d.status});
+        });
+
+        // Write audit trail if this was an edit (re-entry or retroactive)
+        if (previousScore && reason) {
+            const wr = weekResults.find(w => w.id === weekId);
+            await db.collection('scoreEdits').add({
+                weekId, weekNumber: wr?.weekNumber || activeWeek?.weekNumber || 0,
+                groupId, court: court || 0,
+                seriesIndex: si, gameIndex: gi,
+                previousScore,
+                newScore: { t1Score, t2Score },
+                reason,
+                editedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        // If retroactive edit on a completed week, recompute results and re-sync rankings
+        if (isRetroactive && weekId) {
+            btn.textContent = 'Recalculating…';
+            await recomputeWeekResults(weekId);
+        }
+
+        closeModal('modal-score');
+    } catch(e) { errEl.textContent='Error: '+e.message; errEl.classList.remove('hidden'); }
+    finally { btn.disabled=false; btn.textContent='Submit Score'; }
+}
+
+function recalcSeries(s) {
+    const played = s.games.filter(g=>g.available&&g.t1Score!==null);
+    const t1w = played.filter(g=>g.t1Score===11).length;
+    const t2w = played.filter(g=>g.t2Score===11).length;
+    s.winner = t1w===2?'team1':t2w===2?'team2':null;
+    if (s.games[0].t1Score!==null && s.games[1].t1Score!==null) {
+        const g0t1 = s.games[0].t1Score===11, g1t1 = s.games[1].t1Score===11;
+        s.games[2].available = (g0t1!==g1t1);
+    }
+    return s;
+}
+
+// ================================================================
+//  VIEW: LEADERBOARD
+// ================================================================
+let selectedLeaderboardWeek = null; // null = current active week, or a weekResult id
+let loadedPastWeekGroups = null;    // cached weekGroups for a viewed past week
+
+function renderLeaderboard() {
+    const el = document.getElementById('view-leaderboard');
+    const completedWeeks = [...weekResults].sort((a,b) => b.weekNumber - a.weekNumber);
+    const hasActive = activeWeek && weekGroups.length > 0;
+
+    // Build week options for selector
+    const weekOptions = [];
+    if (hasActive) weekOptions.push({ id: null, label: `Week ${activeWeek.weekNumber} (Live)`, weekNum: activeWeek.weekNumber });
+    completedWeeks.forEach(wr => weekOptions.push({ id: wr.id, label: `Week ${wr.weekNumber}`, weekNum: wr.weekNumber }));
+
+    if (weekOptions.length === 0) {
+        el.innerHTML = emptyState('No active week', 'Leaderboard appears here during gameplay.');
+        return;
+    }
+
+    // Default to the latest week — live if it has scores, otherwise most recent completed
+    if (selectedLeaderboardWeek === null) {
+        const liveHasScores = hasActive && weekGroups.some(g => g.series.some(s => s.games.some(gm => gm.t1Score !== null)));
+        if (!liveHasScores && completedWeeks.length > 0) {
+            selectedLeaderboardWeek = completedWeeks[0].id;
+        }
+    }
+    const isLive = selectedLeaderboardWeek === null;
+    const viewingWR = !isLive ? weekResults.find(wr => wr.id === selectedLeaderboardWeek) : null;
+
+    // Compute stats: live from weekGroups, or from saved weekResults
+    let stats, weekNum, statusBadge;
+    if (isLive && hasActive) {
+        stats = computeStats();
+        weekNum = activeWeek.weekNumber;
+        const done = weekGroups.filter(g=>g.status==='complete').length, total = weekGroups.length;
+        statusBadge = `<span class="badge-amber">${done}/${total} courts</span>`;
+    } else if (viewingWR) {
+        stats = viewingWR.players.map(p => ({
+            ...p, winPct: p.gw+p.gl>0 ? p.gw/(p.gw+p.gl) : 0, diff: (p.pf||0)-(p.pa||0),
+            pf: p.pf||0, pa: p.pa||0, court: null, groupId: null
+        }));
+        stats.sort((a,b) => b.lp!==a.lp ? b.lp-a.lp : b.gw!==a.gw ? b.gw-a.gw : a.gl-b.gl);
+        weekNum = viewingWR.weekNumber;
+        statusBadge = `<span class="badge-green">Complete</span>`;
+    } else {
+        el.innerHTML = emptyState('No scores yet', 'Stats appear as games are played.');
+        return;
+    }
+
+    if (stats.length === 0) { el.innerHTML = emptyState('No scores yet', 'Stats appear as games are played.'); return; }
+
+    const selectorHtml = weekOptions.length > 1 ? `
+        <select class="input-dark" style="padding:0.3rem 0.6rem;font-size:0.75rem;width:auto;border-radius:0.5rem;" onchange="selectedLeaderboardWeek=this.value==='live'?null:this.value;loadedPastWeekGroups=null;_gameLogOpen=false;renderLeaderboard()">
+            ${weekOptions.map(o => `<option value="${o.id===null?'live':o.id}" ${(isLive&&o.id===null)||o.id===selectedLeaderboardWeek?'selected':''}>${o.label}</option>`).join('')}
+        </select>` : '';
+
+    const gridCols = '2rem 1fr 3rem 2rem 2rem 3rem 2.5rem 2.5rem 2.5rem';
+    // Court group colors — cycle every 4 players to show potential matchups
+    const groupColors = ['var(--brand)','#60a5fa','#fbbf24','#f87171','#a78bfa','#f472b6','#34d399','#fb923c','#94a3b8','#e879f9'];
+
+    // PICKLED messages — 11-0 shutouts
+    const pickledMsgs = [];
+    const sourceGroups = isLive ? weekGroups : (loadedPastWeekGroups || []);
+    sourceGroups.forEach(g => {
+        const allN = g.players.map(p=>p.name);
+        g.series.forEach(s => {
+            s.games.forEach(gm => {
+                if (!gm.available || gm.t1Score===null) return;
+                if (gm.t1Score===0 || gm.t2Score===0) {
+                    const winnerPositions = gm.t1Score===11 ? s.team1 : s.team2;
+                    const loserPositions  = gm.t1Score===11 ? s.team2 : s.team1;
+                    const winners = winnerPositions.map(pos=>g.players.find(p=>p.position===pos)).map(p=>shortName(p?.name||'?',allN)).join(' and ');
+                    const losers  = loserPositions.map(pos=>g.players.find(p=>p.position===pos)).map(p=>shortName(p?.name||'?',allN)).join(' and ');
+                    pickledMsgs.push(`${winners} just PICKLED ${losers}!`);
+                }
+            });
+        });
+    });
+    const pickledHtml = pickledMsgs.length > 0 ? `
+        <div class="card p-3 mb-4 space-y-1" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);">
+            ${pickledMsgs.map(m => `<div class="text-xs font-bold text-center" style="color:#f87171;">&#127834; ${m}</div>`).join('')}
+        </div>` : '';
+
+    el.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <h2 class="section-label">Week ${weekNum}</h2>
+                ${statusBadge}
+            </div>
+            ${selectorHtml}
+        </div>
+        ${pickledHtml}
+        <div class="card overflow-hidden" style="overflow-x:auto;">
+            <div class="grid text-xs font-bold text-slate-500 px-3 py-2.5" style="grid-template-columns:${gridCols};min-width:460px;background:var(--bg-deep);border-bottom:1px solid var(--border);">
+                <div>#</div><div>Player</div><div class="text-center">LP</div><div class="text-center">W</div><div class="text-center">L</div><div class="text-center">W%</div><div class="text-center">PF</div><div class="text-center">PA</div><div class="text-center">+/-</div>
+            </div>
+            ${stats.map((s,i)=>{
+                const groupIdx = Math.floor(i / 4);
+                const gc = groupColors[groupIdx % groupColors.length];
+                const borderTop = i > 0 && i % 4 === 0 ? `border-top:2px solid ${gc};` : '';
+                const bg = i%2===1?'background:var(--row-alt);':'';
+                const lpColor = s.lp>0?'text-emerald-400':s.lp<0?'text-red-400':'text-slate-400';
+                const lpSign  = s.lp>0?'+':'';
+                const diffColor = s.diff>0?'text-emerald-400':s.diff<0?'text-red-400':'text-slate-500';
+                const diffSign  = s.diff>0?'+':'';
+                const wpct = s.winPct > 0 ? s.winPct.toFixed(3).replace(/^0/,'') : '.000';
+                return `<div class="grid items-center px-3 py-2" style="grid-template-columns:${gridCols};min-width:460px;${bg}${borderTop}">
+                    <div class="text-sm font-black" style="color:${gc};">${i+1}</div>
+                    <div class="text-sm font-semibold text-white truncate">${s.name}</div>
+                    <div class="text-center text-sm font-black ${lpColor}">${lpSign}${s.lp}</div>
+                    <div class="text-center text-sm font-bold text-emerald-400">${s.gw}</div>
+                    <div class="text-center text-sm text-red-400">${s.gl}</div>
+                    <div class="text-center text-xs text-slate-300">${wpct}</div>
+                    <div class="text-center text-xs text-slate-300">${s.pf}</div>
+                    <div class="text-center text-xs text-slate-400">${s.pa}</div>
+                    <div class="text-center text-xs font-bold ${diffColor}">${diffSign}${s.diff}</div>
+                </div>`;
+            }).join('')}
+        </div>
+        <div class="card p-3 mt-3 text-xs text-slate-500 space-y-0.5" style="background:var(--bg-card);">
+            <div class="flex justify-between"><span>Win game</span><span class="text-emerald-400 font-semibold">+5</span></div>
+            <div class="flex justify-between"><span>Lose game</span><span class="text-red-400 font-semibold">-5</span></div>
+            <div class="flex justify-between"><span>Win series (bonus)</span><span class="text-emerald-400 font-semibold">+5</span></div>
+            <div class="flex justify-between text-slate-600"><span>Win 2–0 total</span><span>+15</span></div>
+            <div class="flex justify-between text-slate-600"><span>Win 2–1 total</span><span>+10</span></div>
+            <div class="flex justify-between text-slate-600"><span>Lose 0–2 total</span><span>-10</span></div>
+            <div class="flex justify-between text-slate-600"><span>Lose 1–2 total</span><span>-5</span></div>
+        </div>
+        <p class="text-xs text-slate-600 text-center mt-2">Sorted by LP · then Games Won</p>
+
+        <!-- Game Log -->
+        <div class="mt-4">
+            <button onclick="_gameLogOpen=!_gameLogOpen;${isLive?'renderGameLog()':'loadAndRenderGameLog()'}" class="w-full flex items-center justify-between mb-2 px-1">
+                <span class="section-label">Game Log — Week ${weekNum}</span>
+                <span id="gamelog-chevron" class="text-slate-500 text-xs">${_gameLogOpen?'&#9650;':'&#9660;'}</span>
+            </button>
+            <div id="game-log-container">${_gameLogOpen ? '<p class="text-xs text-slate-500 px-1">Loading…</p>' : ''}</div>
+        </div>`;
+
+    // If game log is open, render it immediately for live week
+    if (_gameLogOpen && isLive) renderGameLog();
+}
+
+let _gameLogOpen = false;
+
+function renderGameLog() {
+    const container = document.getElementById('game-log-container');
+    if (!container || !_gameLogOpen) { if(container) container.innerHTML=''; return; }
+    const groups = loadedPastWeekGroups || weekGroups;
+    if (!groups || groups.length === 0) { container.innerHTML = '<p class="text-xs text-slate-500 px-1">No game data available.</p>'; return; }
+
+    const weekId = selectedLeaderboardWeek || activeWeek?.id;
+    const weekEdits = scoreEdits.filter(e => e.weekId === weekId);
+
+    container.innerHTML = [...groups].sort((a,b) => a.court - b.court).map(g => {
+        const courtEdits = weekEdits.filter(e => e.groupId === g.id);
+        return `
+        <div class="card mb-3 overflow-hidden">
+            <div class="px-4 py-2.5" style="background:var(--bg-deep);border-bottom:1px solid var(--border);">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-green-400">Court ${g.court}</span>
+                    <span class="text-xs text-slate-500">${(()=>{const an=g.players.map(p=>p.name);return g.players.map(p=>lastShortName(p.name,an)).join(', ');})()}</span>
+                </div>
+            </div>
+            <div class="p-3 space-y-3">
+                ${g.series.map((s, si) => {
+                    const glAllN = g.players.map(p=>p.name);
+                    const t1n = s.team1.map(pos=>g.players.find(p=>p.position===pos)).map(p=>shortName(p?.name||'?',glAllN)).join('+');
+                    const t2n = s.team2.map(pos=>g.players.find(p=>p.position===pos)).map(p=>shortName(p?.name||'?',glAllN)).join('+');
+                    const winLabel = s.winner==='team1' ? `${t1n} win` : s.winner==='team2' ? `${t2n} win` : '';
+                    return `
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="section-label">Series ${s.num}: ${t1n} vs ${t2n}</span>
+                            ${winLabel ? `<span class="badge-green" style="font-size:0.6rem;">${winLabel}</span>` : ''}
+                        </div>
+                        <div class="space-y-1">
+                            ${s.games.map((gm, gi) => {
+                                if (!gm.available) return `<div class="text-xs text-slate-600 px-2 py-1">G${gm.num}: Not played</div>`;
+                                if (gm.t1Score === null) return `<div class="text-xs text-slate-500 px-2 py-1">G${gm.num}: Pending</div>`;
+                                const t1w = gm.t1Score === 11;
+                                const shut = gm.t1Score===0||gm.t2Score===0;
+                                const sc = shut ? 'color:#ef4444;' : '';
+                                const hasEdit = courtEdits.some(e => e.seriesIndex===si && e.gameIndex===gi);
+                                const editBadge = hasEdit ? `<span class="badge-amber" style="font-size:0.55rem;margin-left:0.25rem;">EDITED</span>` : '';
+                                const editBtn = isAdmin ? `<button onclick="openScoreModal('${g.id}',${si},${gi},'${weekId}')" class="text-slate-600 hover:text-slate-300 text-xs ml-1">&#9998;</button>` : '';
+                                return `<div class="flex items-center gap-2 px-2 py-1 rounded" style="background:var(--bg-deep);">
+                                    <span class="text-xs text-slate-400 w-6">G${gm.num}</span>
+                                    <span class="text-xs font-bold ${t1w?'text-white':'text-slate-500'}" style="${shut&&t1w?sc:''}">${gm.t1Score}</span>
+                                    <span class="text-slate-600 text-xs">–</span>
+                                    <span class="text-xs font-bold ${!t1w?'text-white':'text-slate-500'}" style="${shut&&!t1w?sc:''}">${gm.t2Score}</span>
+                                    ${editBadge}${editBtn}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function loadAndRenderGameLog() {
+    const container = document.getElementById('game-log-container');
+    if (!_gameLogOpen) { if(container) container.innerHTML=''; return; }
+    if (!selectedLeaderboardWeek) { renderGameLog(); return; }
+
+    // Check if we already loaded these groups
+    if (loadedPastWeekGroups && loadedPastWeekGroups[0]?.weekId === selectedLeaderboardWeek) {
+        renderGameLog(); return;
+    }
+
+    if (container) container.innerHTML = '<p class="text-xs text-slate-500 px-1">Loading game data…</p>';
+    const snap = await db.collection('weekGroups').where('weekId','==',selectedLeaderboardWeek).get();
+    loadedPastWeekGroups = snap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>a.groupIndex-b.groupIndex);
+    renderGameLog();
+}
+
+// ================================================================
+//  VIEW: SEASON TOTALS
+// ================================================================
+let _seasonTab = 'standings'; // 'standings' | 'weekly' | 'absences'
+
+function renderSeason() {
+    const el = document.getElementById('view-season');
+    if (weekResults.length === 0) {
+        el.innerHTML = emptyState('No season data yet', 'Stats save here automatically when each week is ended.');
+        return;
+    }
+
+    const rows = computeSeasonTotals();
+    const weekNums = weekResults.map(wr => wr.weekNumber).sort((a,b) => a-b);
+
+    // Get movement indicators — compare current rank to previous week's rank
+    const sortedWR = [...weekResults].sort((a,b) => b.weekNumber - a.weekNumber);
+    const latestWR = sortedWR[0];
+    const prevWR   = sortedWR[1]; // second most recent week
+
+    // Build current rank map from season totals (rows array, already sorted)
+    const currentRankMap = {};
+    rows.forEach((p, i) => { currentRankMap[p.id] = i + 1; });
+
+    // Build previous rank map — compute from all weeks EXCEPT the latest
+    const prevRankMap = {};
+    if (prevWR) {
+        const prevResults = weekResults.filter(wr => wr.weekNumber <= prevWR.weekNumber);
+        const prevTotals = computeSeasonTotalsFrom(prevResults);
+        prevTotals.forEach((p, i) => { prevRankMap[p.id] = i + 1; });
+    }
+
+    const lpSign  = n => n>0 ? `+${n}` : `${n}`;
+    const lpColor = n => n>0 ? '#34d399' : n<0 ? '#f87171' : 'var(--text-muted)';
+
+    function movementBadge(playerId) {
+        const curRank  = currentRankMap[playerId];
+        const prevRank = prevRankMap[playerId];
+        if (!curRank) return '';
+        if (!prevRank) return weekResults.length <= 1 ? '' : `<span class="badge-blue" style="font-size:0.6rem;">NEW</span>`;
+        const diff = prevRank - curRank; // positive = moved up
+        if (diff > 0) return `<span style="color:#34d399;font-size:0.7rem;font-weight:700;">&#9650;${diff}</span>`;
+        if (diff < 0) return `<span style="color:#f87171;font-size:0.7rem;font-weight:700;">&#9660;${Math.abs(diff)}</span>`;
+        return `<span style="color:var(--text-dim);font-size:0.7rem;">—</span>`;
+    }
+
+    const sGridCols = '2rem 2rem 1fr 3.5rem 2rem 2rem 3rem 2.5rem 2.5rem 2.5rem 3rem 2rem';
+    const sGroupColors = ['var(--brand)','#60a5fa','#fbbf24','#f87171','#a78bfa','#f472b6','#34d399','#fb923c','#94a3b8','#e879f9'];
+
+    el.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="section-label">Season</h2>
+            <span class="text-xs text-slate-500">${weekResults.length} week${weekResults.length!==1?'s':''} complete</span>
+        </div>
+        <div class="flex gap-1 mb-4" style="border-bottom:1px solid var(--border);">
+            <button onclick="_seasonTab='standings';renderSeason()" class="px-3 py-2 text-xs font-semibold transition-colors ${_seasonTab==='standings'?'text-green-400':'text-slate-500 hover:text-slate-300'}" style="${_seasonTab==='standings'?'border-bottom:2px solid var(--brand);':''}">Standings</button>
+            <button onclick="_seasonTab='weekly';renderSeason()" class="px-3 py-2 text-xs font-semibold transition-colors ${_seasonTab==='weekly'?'text-green-400':'text-slate-500 hover:text-slate-300'}" style="${_seasonTab==='weekly'?'border-bottom:2px solid var(--brand);':''}">Week by Week</button>
+            <button onclick="_seasonTab='absences';renderSeason()" class="px-3 py-2 text-xs font-semibold transition-colors ${_seasonTab==='absences'?'text-green-400':'text-slate-500 hover:text-slate-300'}" style="${_seasonTab==='absences'?'border-bottom:2px solid var(--brand);':''}">Absences</button>
+        </div>
+        ${_seasonTab==='standings' ? `<div class="card overflow-hidden" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <div class="grid text-xs font-bold text-slate-500 px-3 py-2.5" style="grid-template-columns:${sGridCols};min-width:560px;background:var(--bg-deep);border-bottom:1px solid var(--border);">
+                <div>#</div><div class="text-center">+/-</div><div>Player</div><div class="text-center" style="color:var(--brand);">LP</div><div class="text-center">W</div><div class="text-center">L</div><div class="text-center">W%</div><div class="text-center">PF</div><div class="text-center">PA</div><div class="text-center">+/-</div><div class="text-center">Diff%</div><div class="text-center">Abs</div>
+            </div>
+            ${rows.map((p,i)=>{
+                const groupIdx = Math.floor(i / 4);
+                const gc = sGroupColors[groupIdx % sGroupColors.length];
+                const borderTop = i > 0 && i % 4 === 0 ? `border-top:2px solid ${gc};` : '';
+                const bg = i%2===1?'background:var(--row-alt);':'';
+                const diffColor = p.diff>0?'text-emerald-400':p.diff<0?'text-red-400':'text-slate-500';
+                const diffSign  = p.diff>0?'+':'';
+                const wpct = p.winPct > 0 ? p.winPct.toFixed(3).replace(/^0/,'') : '.000';
+                const absColor = p.absences > (leagueSettings.absencePenaltyThreshold??1) ? 'color:#f87171;font-weight:700;' : 'color:var(--text-muted);';
+                const lpDisplay = p.absencePenalty < 0 ? `${lpSign(p.totalLP)} <span style="font-size:0.6rem;color:#f87171;">(${p.absencePenalty})</span>` : lpSign(p.totalLP);
+                return `<div class="grid items-center px-3 py-2" style="grid-template-columns:${sGridCols};min-width:560px;${bg}${borderTop}">
+                    <div class="text-sm font-black" style="color:${gc};">${i+1}</div>
+                    <div class="text-center">${movementBadge(p.id)}</div>
+                    <div class="text-sm font-semibold text-white truncate">${p.name}</div>
+                    <div class="text-center text-sm font-black" style="color:${lpColor(p.totalLP)};">${lpDisplay}</div>
+                    <div class="text-center text-sm font-bold text-emerald-400">${p.gw}</div>
+                    <div class="text-center text-sm text-red-400">${p.gl}</div>
+                    <div class="text-center text-xs text-slate-300">${wpct}</div>
+                    <div class="text-center text-xs text-slate-300">${p.pf}</div>
+                    <div class="text-center text-xs text-slate-400">${p.pa}</div>
+                    <div class="text-center text-xs font-bold ${diffColor}">${diffSign}${p.diff}</div>
+                    <div class="text-center text-xs text-slate-300">${p.pf+p.pa>0 ? (p.pf/(p.pf+p.pa)*100).toFixed(1)+'%' : '—'}</div>
+                    <div class="text-center text-xs" style="${absColor}">${p.absences}</div>
+                </div>`;
+            }).join('')}
+        </div>` : ''}
+
+        ${_seasonTab==='weekly' ? `
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <table style="width:100%;border-collapse:collapse;min-width:${130+weekNums.length*52+60}px;">
+                <thead>
+                    <tr style="background:var(--bg-deep);border-bottom:1px solid var(--border);">
+                        <th style="position:sticky;left:0;background:var(--bg-deep);z-index:1;text-align:left;padding:0.5rem 0.75rem;font-size:0.65rem;font-weight:700;color:var(--text-label);text-transform:uppercase;min-width:120px;">Player</th>
+                        ${weekNums.map(wn=>`<th style="text-align:center;padding:0.5rem 0.3rem;font-size:0.65rem;font-weight:700;color:var(--text-label);text-transform:uppercase;min-width:48px;">Wk ${wn}</th>`).join('')}
+                        <th style="text-align:center;padding:0.5rem 0.3rem;font-size:0.65rem;font-weight:700;color:var(--brand);text-transform:uppercase;min-width:52px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map((p,i) => {
+                        const stickyBg = i%2===1 ? 'var(--sticky-bg-alt)' : 'var(--sticky-bg)';
+                        return `<tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--row-alt);':''}">
+                            <td style="position:sticky;left:0;background:${stickyBg};z-index:1;padding:0.4rem 0.75rem;font-size:0.8rem;font-weight:600;color:var(--text);min-width:120px;">${p.name}</td>
+                            ${weekNums.map(wn => {
+                                const w = p.weeks[wn];
+                                if (!w) return `<td style="text-align:center;padding:0.4rem 0.3rem;font-size:0.7rem;color:var(--border);">—</td>`;
+                                return `<td style="text-align:center;padding:0.4rem 0.3rem;font-size:0.7rem;font-weight:700;color:${lpColor(w.lp)};">${lpSign(w.lp)}</td>`;
+                            }).join('')}
+                            <td style="text-align:center;padding:0.4rem 0.3rem;font-size:0.8rem;font-weight:900;color:${lpColor(p.totalLP)};">${lpSign(p.totalLP)}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>` : ''}
+
+        ${_seasonTab==='absences' ? `
+        ${rows.some(p=>p.absences>0) ? `
+        ${rows.some(p=>p.absencePenalty<0) ? `
+        <div class="card p-3 mb-3 text-xs text-slate-500" style="background:var(--bg-card);">
+            <div class="flex justify-between"><span>Absence penalty</span><span class="text-red-400 font-semibold">${leagueSettings.absencePenaltyPerOccurrence} LP per absence after ${leagueSettings.absencePenaltyThreshold===1?'the 1st':leagueSettings.absencePenaltyThreshold}</span></div>
+        </div>` : ''}
+        <div class="space-y-2">
+            ${rows.filter(p=>p.absences>0).sort((a,b)=>b.absences-a.absences).map(p => {
+                const threshold = leagueSettings.absencePenaltyThreshold??1;
+                const overThreshold = p.absences > threshold;
+                const absentWeeks = weekResults.filter(wr => (wr.absentPlayerIds||[]).includes(p.id)).map(wr => wr.weekNumber).sort((a,b)=>a-b);
+                return `<div class="card p-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-semibold text-white">${p.name}</span>
+                        <span class="text-xs font-bold" style="color:${overThreshold?'#f87171':'var(--text-muted)'};">${p.absences} absence${p.absences!==1?'s':''} ${overThreshold?`(${p.absencePenalty} LP)`:''}</span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-0.5">Missed: ${absentWeeks.map(w=>'Wk '+w).join(', ')}</div>
+                </div>`;
+            }).join('')}
+        </div>` : `<p class="text-sm text-slate-500 text-center py-4">No absences recorded yet.</p>`}` : ''}
+
+        ${_seasonTab==='standings' ? `
+        <p class="text-xs text-slate-600 text-center mt-3">Sorted by LP · tiebreaker: Wins, then Points For</p>` : ''}`;
+}
+
+// League Points formula:
+//   Win game: +5  |  Lose game: -5
+//   Win series 2-0: +15  |  Win series 2-1: +10
+//   Lose series 0-2: -10 |  Lose series 1-2: -5
+// LP = (game wins × 5) + (game losses × -5) + (series wins × 5)
+// This naturally produces: 2-0 win=+15, 2-1 win=+10, 0-2 loss=-10, 1-2 loss=-5
+function calcLP(s) {
+    return (s.gw * 5) + (s.gl * -5) + (s.sw * 5);
+}
+
+// Compute stats from weekGroups data (works for live active week or loaded past week groups)
+function computeStats(groups) {
+    groups = groups || weekGroups;
+    const map = {};
+    groups.forEach(g => {
+        g.players.forEach(p => {
+            if (!map[p.id]) map[p.id] = { id:p.id, name:p.name, gw:0, gl:0, sw:0, sl:0, pf:0, pa:0 };
+        });
+        g.series.forEach(s => {
+            const t1p = s.team1.map(pos=>g.players.find(p=>p.position===pos)).filter(Boolean);
+            const t2p = s.team2.map(pos=>g.players.find(p=>p.position===pos)).filter(Boolean);
+            let t1gw=0, t2gw=0;
+
+            s.games.forEach(gm => {
+                if (!gm.available || gm.t1Score===null) return;
+                const t1w = gm.t1Score===11;
+                if (t1w) t1gw++; else t2gw++;
+                t1p.forEach(p => { t1w ? map[p.id].gw++ : map[p.id].gl++; map[p.id].pf += gm.t1Score; map[p.id].pa += gm.t2Score; });
+                t2p.forEach(p => { !t1w ? map[p.id].gw++ : map[p.id].gl++; map[p.id].pf += gm.t2Score; map[p.id].pa += gm.t1Score; });
+            });
+
+            if (t1gw === 2) {
+                t1p.forEach(p => map[p.id].sw++);
+                t2p.forEach(p => map[p.id].sl++);
+            } else if (t2gw === 2) {
+                t2p.forEach(p => map[p.id].sw++);
+                t1p.forEach(p => map[p.id].sl++);
+            }
+        });
+    });
+    const result = Object.values(map).filter(s => s.gw + s.gl > 0);
+    result.forEach(s => {
+        s.lp = calcLP(s);
+        s.winPct = s.gw + s.gl > 0 ? s.gw / (s.gw + s.gl) : 0;
+        s.diff = s.pf - s.pa;
+        const grp = groups.find(g => g.players.some(p => p.id === s.id));
+        s.court   = grp?.court   || null;
+        s.groupId = grp?.id      || null;
+    });
+    return result.sort((a,b) =>
+        b.lp!==a.lp ? b.lp-a.lp : b.gw!==a.gw ? b.gw-a.gw : a.gl!==b.gl ? a.gl-b.gl : b.sw-a.sw);
+}
+
+// Compute season totals from all weekResults (delegates to shared implementation)
+function computeSeasonTotals() {
+    return computeSeasonTotalsFrom(weekResults);
+}
+
+// ================================================================
+//  VIEW: ADMIN
+// ================================================================
+function renderAdmin() {
+    const el = document.getElementById('view-admin');
+    if (!isAdmin) {
+        el.innerHTML=`<div class="card p-8 text-center">
+            <div class="text-3xl mb-3">&#128274;</div>
+            <p class="text-slate-400 text-sm mb-4">Admin access required</p>
+            <button onclick="showAdminLogin()" class="btn-primary" style="width:auto;display:inline-block;padding:0.5rem 1.5rem;">Admin Login</button>
+        </div>`; return;
+    }
+
+    const hasWeek   = activeWeek!==null;
+    const isLive    = hasWeek&&activeWeek.status==='active';
+    const isSetup   = hasWeek&&activeWeek.status==='setup';
+
+    el.innerHTML = `
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="section-label">Admin Panel</h2>
+            <button onclick="isAdmin=false;renderAdmin()" class="btn-ghost" style="width:auto;font-size:0.75rem;">Logout</button>
+        </div>
+
+        <!-- SUB REQUESTS -->
+        <h3 class="section-label mb-2">Sub Requests${hasWeek?` — Week ${activeWeek.weekNumber}`:''}</h3>
+        ${!hasWeek?`<p class="text-slate-500 text-xs italic mb-4 px-1">Start a week first to manage sub requests.</p>`:`
+        <div class="card p-4 mb-5">
+            ${subRequests.length===0?`<p class="text-slate-500 text-xs italic mb-3">No sub requests yet.</p>`:`
+            <div class="space-y-2 mb-3">
+                ${subRequests.map(s=>`
+                    <div class="flex items-start justify-between gap-2 py-1" style="border-bottom:1px solid var(--border);">
+                        <div>
+                            <span class="text-sm font-semibold text-white">${s.playerName}</span>
+                            <span class="text-sm text-slate-400 ml-1">— ${s.reason}</span>
+                        </div>
+                        <button onclick="deleteSubReq('${s.id}')" class="text-red-400 hover:text-red-300 text-xl leading-none shrink-0">&times;</button>
+                    </div>`).join('')}
+            </div>`}
+            <div class="space-y-2 pt-2" ${subRequests.length>0?'style="border-top:1px solid var(--border);"':''}>
+                <select id="sub-player-sel" class="input-dark" style="padding:0.4rem 0.5rem;">
+                    <option value="">— Who needs a sub? —</option>
+                    ${playersOnly().filter(p=>!subRequests.some(s=>s.playerId===p.id)).map(p=>`<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('')}
+                </select>
+                <input id="sub-reason-inp" type="text" placeholder="Reason (e.g. out of town, work)" class="input-dark" onkeydown="if(event.key==='Enter')addSubReq()" />
+                <button onclick="addSubReq()" class="btn-outline" style="border-color:var(--brand);color:var(--brand);padding:0.4rem;">+ Add Sub Request</button>
+            </div>
+        </div>`}
+
+        <!-- INITIAL RANKINGS (Week 1 setup) -->
+        ${!hasWeek && weekResults.length===0 ? `
+        <h3 class="section-label mb-2">Set Initial Rankings</h3>
+        <div class="card p-4 mb-5">
+            <p class="text-xs text-slate-400 mb-3">Drag or number players 1–${playersOnly().length} before your first week. Rank 1 = best player.</p>
+            <div class="space-y-1 mb-3" style="max-height:300px;overflow-y:auto;" id="initial-rank-list">
+                ${playersOnly().sort((a,b)=>(a.currentRank||999)-(b.currentRank||999)).map((p,i)=>`
+                    <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg" style="background:var(--bg-deep);">
+                        <input type="number" min="1" max="50" value="${p.currentRank||i+1}" id="irank-${p.id}"
+                            class="w-12 text-center rounded-lg text-sm font-bold text-white"
+                            style="background:var(--bg-card);border:1px solid var(--border-input);padding:0.2rem;outline:none;" />
+                        <span class="text-sm text-slate-300 flex-1">${p.name}</span>
+                    </div>`).join('')}
+            </div>
+            <button onclick="saveInitialRankings()" class="btn-primary">Save Rankings</button>
+        </div>` : ''}
+
+        <!-- WEEK MANAGEMENT -->
+        <h3 class="section-label mb-2">Week Management</h3>
+        ${!hasWeek?`
+        <div class="card p-4 mb-4">
+            <p class="text-sm text-slate-400 mb-2">No active week. Set up courts for this week's games.</p>
+            <div class="flex items-center gap-3 mb-3">
+                <label class="section-label whitespace-nowrap">Week #</label>
+                <input type="number" id="start-week-num" min="1" max="52"
+                    value="${pendingWeekNum || (seasonConfig?.currentWeek||0)+1}"
+                    oninput="pendingWeekNum=parseInt(this.value)||null"
+                    class="input-dark w-20" style="padding:0.4rem 0.75rem;" />
+                <span class="text-xs text-slate-500">auto-filled from standings</span>
+            </div>
+            <button onclick="beginWeekSetup()" class="btn-primary">&#127942; Start New Week</button>
+        </div>`:isSetup?`
+        <div class="card p-4 mb-4">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm text-amber-400 font-semibold">Week ${activeWeek.weekNumber} — Setup in progress</p>
+                <button onclick="promptEditWeekNum()" class="text-xs text-slate-400 hover:text-white border border-slate-600 px-2 py-1 rounded-lg transition-colors">Edit #</button>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">Complete the lineup and lock in to go live.</p>
+            <button onclick="continueSetup()" class="btn-outline" style="border-color:#fbbf24;color:#fbbf24;">Continue Setup →</button>
+        </div>`:`
+        <div class="card p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-green-400 font-semibold">Week ${activeWeek.weekNumber} — Live</p>
+                    <p class="text-xs text-slate-400">${weekGroups.length} courts · ${weekGroups.filter(g=>g.status==='complete').length} complete</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="promptEditWeekNum()" class="text-xs text-slate-400 hover:text-white border border-slate-600 px-2 py-1 rounded-lg transition-colors">Edit #</button>
+                    <button onclick="endWeek()" class="text-xs text-red-400 border border-red-400/30 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors">End Week</button>
+                </div>
+            </div>
+        </div>`}
+
+        <!-- SETUP PANEL -->
+        <div id="setup-panel"></div>
+
+        <!-- LEAGUE SETTINGS -->
+        <h3 class="section-label mb-2 mt-5">League Settings</h3>
+        <div class="card p-4 mb-5">
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <p class="text-xs text-slate-400 mb-1">Free absences</p>
+                    <input type="number" min="0" max="10" id="setting-abs-threshold" value="${leagueSettings.absencePenaltyThreshold??1}" class="input-dark w-full" style="padding:0.4rem 0.75rem;" />
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400 mb-1">LP penalty per extra</p>
+                    <input type="number" min="-50" max="0" id="setting-abs-penalty" value="${leagueSettings.absencePenaltyPerOccurrence??-10}" class="input-dark w-full" style="padding:0.4rem 0.75rem;" />
+                </div>
+            </div>
+            <button onclick="saveLeagueSettings()" class="btn-outline" style="padding:0.4rem;">Save Settings</button>
+        </div>
+
+        <!-- SCORE EDIT LOG -->
+        <div class="mt-4">
+            <button onclick="_editLogOpen=!_editLogOpen;renderAdmin()" class="w-full flex items-center justify-between mb-2 px-1">
+                <span class="section-label">Score Edit Log (${scoreEdits.length})</span>
+                <span class="text-slate-500 text-xs">${_editLogOpen?'&#9650;':'&#9660;'}</span>
+            </button>
+            ${_editLogOpen && scoreEdits.length > 0 ? `
+            <div class="card p-3 space-y-2 mb-4" style="max-height:300px;overflow-y:auto;">
+                ${scoreEdits.map(e => {
+                    const dateStr = e.editedAt?.toDate ? e.editedAt.toDate().toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+                    return `<div class="rounded-lg p-2.5" style="background:var(--bg-deep);border:1px solid var(--border);">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold text-white">Wk ${e.weekNumber} · C${e.court}</span>
+                            <span class="text-xs text-slate-500">${dateStr}</span>
+                        </div>
+                        <div class="text-xs text-slate-400">S${e.seriesIndex+1} G${e.gameIndex+1}: <span class="text-red-400">${e.previousScore.t1Score}–${e.previousScore.t2Score}</span> → <span class="text-emerald-400">${e.newScore.t1Score}–${e.newScore.t2Score}</span></div>
+                        <div class="text-xs text-slate-500 mt-0.5 italic">${e.reason}</div>
+                    </div>`;
+                }).join('')}
+            </div>` : _editLogOpen ? `<p class="text-xs text-slate-500 italic mb-4 px-1">No score edits yet.</p>` : ''}
+        </div>
+
+        <!-- HOW IT WORKS -->
+        <div class="mt-6 pt-4" style="border-top:1px solid var(--border);">
+            <button onclick="toggleHowItWorks()" class="w-full flex items-center justify-between mb-2 px-1">
+                <span class="section-label">How This App Works</span>
+                <span id="how-chevron" class="text-slate-500 text-xs">&#9660;</span>
+            </button>
+            <div id="how-it-works" class="hidden">
+                <div class="rounded-xl p-4 space-y-3 text-xs text-slate-400" style="background:var(--bg-deep);border:1px solid var(--border);line-height:1.6;">
+                    <div>
+                        <p class="text-slate-300 font-semibold mb-1">First-Time Setup</p>
+                        <p>1. Open the <span class="text-white font-semibold">Admin</span> tab and add all your players to the roster (one-time setup).</p>
+                        <p class="mt-1">2. Before Week 1, use <span class="text-white font-semibold">Set Initial Rankings</span> above to order players 1&#8211;40. Rank 1 = best player. This determines court assignments for the first week.</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-300 font-semibold mb-1">Before the Week</p>
+                        <p>3. If a player can&#39;t make it, add a <span class="text-white font-semibold">Sub Request</span> above &#8212; pick their name and enter a reason. Each player can only be listed once.</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-300 font-semibold mb-1">Starting the Week</p>
+                        <p>4. Confirm the week number and tap <span class="text-green-400 font-semibold">Start New Week</span>.</p>
+                        <p class="mt-1">5. <span class="text-white font-semibold">Step 1 &#8212; Roster:</span> Review who&#39;s playing. Absent players are automatically excluded. Add up to 3 subs if needed. Total must be a multiple of 4.</p>
+                        <p class="mt-1">6. Tap <span class="text-green-400 font-semibold">Build Groups &#8594;</span> to auto-assign players to courts by ranking (top 4 on one court, next 4 on another, etc.).</p>
+                        <p class="mt-1">7. <span class="text-white font-semibold">Step 2 &#8212; Groups:</span> Review court assignments. Adjust court numbers if needed.</p>
+                        <p class="mt-1">8. Tap <span class="text-green-400 font-semibold">Lock In Week</span> &#8212; players can now see their courts on the &#34;This Week&#34; tab.</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-300 font-semibold mb-1">During the Week</p>
+                        <p>9. Go to the <span class="text-white font-semibold">Courts</span> tab. Tap a court &#8594; tap a game &#8594; pick the winner &#8594; enter the losing team&#39;s score (0&#8211;10). Winner always gets 11.</p>
+                        <p class="mt-1">10. Each court plays 3 series (all doubles partner combinations). Each series is best-of-3. Game 3 only unlocks if the first two games are split.</p>
+                        <p class="mt-1">11. An 11&#8211;0 win is a <span class="text-red-400 font-semibold">PICKLE</span> &#8212; it gets called out on the Leaderboard!</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-300 font-semibold mb-1">After the Week</p>
+                        <p>12. Once all courts are done, tap <span class="text-red-400 font-semibold">End Week</span> above. This:</p>
+                        <p class="mt-1 ml-3">&#8226; Saves all stats (W, L, W%, PF, PA, +/-, LP)</p>
+                        <p class="ml-3">&#8226; Records absences (penalty after 1st: ${leagueSettings.absencePenaltyPerOccurrence} LP each)</p>
+                        <p class="ml-3">&#8226; Updates season standings and player rankings</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-300 font-semibold mb-1">Editing Past Scores</p>
+                        <p>13. Go to <span class="text-white font-semibold">Leaderboard</span> &#8594; select the week &#8594; expand <span class="text-white font-semibold">Game Log</span> &#8594; tap the pencil icon on any game. A reason is required. Stats and rankings are automatically recalculated.</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-300 font-semibold mb-1">What Players See</p>
+                        <p>&#8226; <span class="text-white font-semibold">This Week:</span> Court assignments and sub requests</p>
+                        <p>&#8226; <span class="text-white font-semibold">Courts:</span> Live scores for each court and series</p>
+                        <p>&#8226; <span class="text-white font-semibold">Leaderboard:</span> Weekly standings with game log (select any past week)</p>
+                        <p>&#8226; <span class="text-white font-semibold">Season:</span> Season standings, week-by-week LP breakdown, absence history</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-300 font-semibold mb-1">League Points Formula</p>
+                        <p>Win game: <span class="text-emerald-400">+5</span> &bull; Lose game: <span class="text-red-400">-5</span> &bull; Win series: <span class="text-emerald-400">+5 bonus</span></p>
+                        <p class="mt-0.5">Sweep 2&#8211;0: +15 &bull; Win 2&#8211;1: +10 &bull; Lose 1&#8211;2: -5 &bull; Swept 0&#8211;2: -10</p>
+                        <p class="mt-0.5">Ranked by: LP &#8594; Wins &#8594; Points For</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NUKE -->
+        <div class="mt-4 pt-4" style="border-top:1px solid var(--border);">
+            <button onclick="showNukeConfirm()" class="w-full py-2.5 rounded-xl text-sm font-bold transition-colors" style="background:rgba(239,68,68,0.1);border:1.5px solid rgba(239,68,68,0.3);color:#f87171;">
+                &#128465; Nuke All Data
+            </button>
+        </div>
+    `;
+
+    if (setup.step) renderSetupPanel();
+}
+
+// ================================================================
+//  ADMIN: WEEK SETUP
+// ================================================================
+async function beginWeekSetup() {
+    if (activeWeek) { alert('End the current week before starting a new one.'); return; }
+    const weekNum = pendingWeekNum || parseInt(document.getElementById('start-week-num')?.value) || ((seasonConfig?.currentWeek||0)+1);
+    pendingWeekNum = null;
+    setup = { step:'roster', absentIds: new Set(subRequests.map(s=>s.playerId)), subIds: new Set(), roster:[], groups:[], forceInclude: new Set() };
+    await db.collection('weeks').add({
+        weekNumber: weekNum, year: new Date().getFullYear(),
+        status:'setup', groupCount:0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Listener will fire and re-render; setup.step is set so panel will show
+}
+
+function continueSetup() {
+    setup.step = 'roster';
+    setup.subIds = setup.subIds || new Set();
+    renderAdmin();
+    renderSetupPanel();
+    setTimeout(() => document.getElementById('setup-panel')?.scrollIntoView({behavior:'smooth',block:'start'}), 100);
+}
+
+function renderSetupPanel() {
+    const el = document.getElementById('setup-panel');
+    if (!el) return;
+
+    const ranked   = playersOnly().filter(p=>p.currentRank!=null).sort((a,b)=>a.currentRank-b.currentRank);
+    const unranked = playersOnly().filter(p=>p.currentRank==null);
+    const subs     = subsOnly();
+
+    if (setup.step==='roster') {
+        const absentIds    = new Set(subRequests.map(s=>s.playerId));
+        const active       = ranked.filter(p=>!absentIds.has(p.id));
+        const absent       = ranked.filter(p=>absentIds.has(p.id));
+        const checkedSubs  = subs.filter(p=>setup.subIds.has(p.id));
+        const total        = active.length + checkedSubs.length;
+        const subsChecked  = checkedSubs.length;
+        const subsNeeded   = (4 - (total % 4)) % 4; // subs to reach next multiple of 4
+        const overForty    = total > 40;
+        const isGood       = !overForty && total > 0 && total % 4 === 0;
+        const canAddSub    = !overForty && subsChecked < 3 && total < 40;
+
+        let countColor, countMsg;
+        if (total < 4) {
+            countColor = '#f87171';
+            countMsg   = 'Not enough players — need at least 4.';
+        } else if (overForty) {
+            countColor = '#f87171';
+            const over = total - 40;
+            countMsg   = `${total} players — over 40 max. Remove ${over} player${over>1?'s':''}.`;
+        } else if (isGood) {
+            countColor = 'var(--brand)';
+            countMsg   = `${total} players → ${total/4} courts ✓`;
+        } else {
+            countColor = '#fbbf24';
+            const target = total + subsNeeded;
+            if (canAddSub && target <= 40) {
+                countMsg = `${total} players — add ${subsNeeded} sub${subsNeeded>1?'s':''} to reach ${target} (${target/4} courts)`;
+            } else {
+                // Can't add enough subs — will trim
+                const trimTo = Math.floor(total/4)*4;
+                countMsg = `${total} players → trimming ${total-trimTo} to reach ${trimTo} (${trimTo/4} courts)`;
+            }
+        }
+
+        el.innerHTML = `
+            <div class="card p-4 mt-2">
+                <h3 class="text-sm font-bold text-white mb-3">Step 1: Review Roster</h3>
+
+                <!-- Running count -->
+                <div class="flex items-center justify-between px-4 py-3 rounded-xl mb-4" style="background:var(--bg-deep);border:1px solid var(--border);">
+                    <span class="section-label">Count</span>
+                    <span class="text-sm font-black" id="roster-count-el" style="color:${countColor};">${countMsg}</span>
+                </div>
+
+                <!-- Active players -->
+                <h4 class="section-label mb-2">Playing (${active.length})</h4>
+                <div class="space-y-0.5 mb-4 max-h-48 overflow-y-auto">
+                    ${active.map(p=>`
+                        <div class="flex items-center gap-3 px-3 py-1.5">
+                            <span class="text-emerald-400 text-xs font-bold">✓</span>
+                            <span class="text-sm text-slate-300 flex-1">${p.name}</span>
+                            <span class="badge-blue shrink-0">#${p.currentRank}</span>
+                        </div>`).join('')}
+                </div>
+
+                <!-- Absent -->
+                ${absent.length>0?`
+                <h4 class="section-label mb-2">Absent — Sub Requested (${absent.length})</h4>
+                <div class="space-y-0.5 mb-4">
+                    ${absent.map(p=>{
+                        const req=subRequests.find(s=>s.playerId===p.id);
+                        return `<div class="flex items-center gap-3 px-3 py-1.5">
+                            <span class="badge-amber shrink-0">OUT</span>
+                            <span class="text-sm text-slate-500 flex-1">${p.name}</span>
+                            ${req?.reason?`<span class="text-xs text-slate-600 italic">${req.reason}</span>`:''}
+                        </div>`;
+                    }).join('')}
+                </div>`:''}
+
+                <!-- Subs section -->
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="section-label">Subs — add to bottom of roster (max 3)</h4>
+                    <span class="text-xs font-bold" style="color:${subsChecked===3?'#fbbf24':'var(--text-label)'};">${subsChecked}/3</span>
+                </div>
+
+                <!-- Add new sub inline -->
+                <div class="flex gap-2 mb-3">
+                    <input id="new-sub-name" type="text" placeholder="New sub name…" class="input-dark flex-1" style="padding:0.4rem 0.75rem;"
+                        onkeydown="if(event.key==='Enter')addSubPlayer()" />
+                    <button onclick="addSubPlayer()" class="text-sm font-semibold text-blue-400 border border-blue-500/40 px-3 py-1.5 rounded-xl hover:bg-blue-500/10 transition-colors whitespace-nowrap">+ Add Sub</button>
+                </div>
+
+                ${subs.length>0?`
+                <div class="space-y-0.5 mb-4">
+                    ${subs.map(p=>{
+                        const checked  = setup.subIds.has(p.id);
+                        const disabled = !checked && !canAddSub;
+                        return `
+                        <label class="flex items-center gap-3 px-3 py-2 rounded-lg ${disabled?'opacity-35 cursor-not-allowed':'hover:bg-slate-700/20 cursor-pointer'} transition-colors">
+                            <input type="checkbox" id="sc-${p.id}" ${checked?'checked':''} ${disabled?'disabled':''} class="w-4 h-4 accent-blue-400" onchange="toggleSub('${p.id}',this.checked)" />
+                            <span class="text-sm ${disabled?'text-slate-500':'text-blue-400'} flex-1">${p.name}</span>
+                            <span class="text-xs ${disabled?'text-slate-600':'text-blue-500'}">Sub</span>
+                        </label>`;
+                    }).join('')}
+                </div>`:`
+                <p class="text-xs text-slate-500 italic mb-4 px-1">No subs yet — add one above.</p>`}
+
+                <button onclick="buildGroups()" class="btn-primary" ${overForty||total<4?'disabled style="opacity:0.5;cursor:not-allowed;"':''}>Build Groups →</button>
+            </div>`;
+    } else if (setup.step==='groups') {
+        const trimWarning = setup.trimmedPlayers?.length > 0
+            ? `<div class="rounded-xl p-3 mb-3" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);">
+                   <p class="text-xs text-amber-400 font-semibold mb-0.5">&#9888; ${setup.trimmedPlayers.length} player${setup.trimmedPlayers.length>1?'s':''} removed to reach a multiple of 4:</p>
+                   <p class="text-xs text-amber-500">${setup.trimmedPlayers.join(', ')}</p>
+               </div>` : '';
+        el.innerHTML = `
+            <div class="card p-4 mt-2">
+                <h3 class="text-sm font-bold text-white mb-1">Step 2: Review Groups & Courts</h3>
+                <p class="text-xs text-slate-400 mb-3">${setup.groups.length} groups · ${setup.groups.length*4} players · Courts are suggested — adjust if needed.</p>
+                ${trimWarning}
+                <div class="space-y-2 mb-4">
+                    ${setup.groups.map((g,i)=>`
+                        <div class="rounded-xl p-3" style="background:var(--bg-deep);border:1px solid var(--border);">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-sm font-bold text-white">Group ${String.fromCharCode(65+i)}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-slate-400">Court:</span>
+                                    <input type="number" min="1" max="20" value="${g.court}"
+                                        onchange="setup.groups[${i}].court=parseInt(this.value)||${g.court}"
+                                        class="w-14 text-center rounded-lg text-sm font-bold text-white"
+                                        style="background:var(--bg-card);border:1px solid var(--border-input);padding:0.2rem 0.4rem;outline:none;"
+                                        onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--border-input)'" />
+                                </div>
+                            </div>
+                            <div class="text-xs text-slate-400">${g.players.map((p,j)=>`${j+1}. ${p.name}${p.isSub?' (sub)':''}`).join(' · ')}</div>
+                        </div>`).join('')}
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="setup.step='roster';renderAdmin();renderSetupPanel()" class="btn-outline">← Back</button>
+                    <button onclick="showLockConfirm()" class="btn-primary">Lock In Week</button>
+                </div>
+            </div>`;
+    }
+}
+
+function toggleSub(id, adding) {
+    if (adding) {
+        const absentIds   = new Set(subRequests.map(s=>s.playerId));
+        const activeCount = playersOnly().filter(p=>p.currentRank!=null&&!absentIds.has(p.id)).length;
+        // Enforce max 3 subs and 40 total (fallback guard — UI disables buttons too)
+        if (setup.subIds.size >= 3 || activeCount + setup.subIds.size + 1 > 40) {
+            document.getElementById(`sc-${id}`).checked = false;
+            return;
+        }
+        setup.subIds.add(id);
+    } else {
+        setup.subIds.delete(id);
+    }
+    renderSetupPanel();
+}
+
+async function addSubPlayer() {
+    const input = document.getElementById('new-sub-name');
+    const name  = input?.value.trim();
+    if (!name) return;
+    if (players.find(p=>p.name.toLowerCase()===name.toLowerCase())) {
+        alert(`"${name}" already exists.`); return;
+    }
+    await db.collection('players').add({
+        name, type:'sub', line:null, currentRank:null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = '';
+    // Firestore listener re-renders automatically — new sub appears in list
+}
+
+function buildGroups() {
+    const absentIds  = new Set(subRequests.map(s=>s.playerId));
+    const ranked     = playersOnly().filter(p=>p.currentRank!=null&&!absentIds.has(p.id))
+                         .sort((a,b)=>a.currentRank-b.currentRank);
+    const activeSubs = subsOnly().filter(p=>setup.subIds.has(p.id));
+    const combined   = [...ranked, ...activeSubs].slice(0, 40);
+    const target     = Math.floor(combined.length/4)*4;
+
+    setup.trimmedPlayers = combined.slice(target).map(p=>p.name);
+    setup.roster = combined.slice(0, target);
+    setup.groups = [];
+    for (let i=0; i<setup.roster.length; i+=4) {
+        const gp = setup.roster.slice(i,i+4).map((p,j)=>({
+            id:p.id, name:p.name, rank:p.currentRank||999, position:j+1, isSub:p.type==='sub'
+        }));
+        setup.groups.push({ groupIndex:setup.groups.length, court:COURT_ORDER[setup.groups.length]||setup.groups.length+1, players:gp });
+    }
+    setup.step = 'groups';
+    renderAdmin(); renderSetupPanel();
+}
+
+function showLockConfirm() {
+    document.getElementById('lock-summary').innerHTML = `
+        <div class="flex justify-between text-slate-300"><span>Week</span><span class="font-bold text-white">${activeWeek.weekNumber}</span></div>
+        <div class="flex justify-between text-slate-300"><span>Players</span><span class="font-bold text-white">${setup.groups.length*4}</span></div>
+        <div class="flex justify-between text-slate-300"><span>Groups / Courts</span><span class="font-bold text-white">${setup.groups.length}</span></div>
+        <div class="flex justify-between text-slate-300"><span>Courts</span><span class="font-bold text-white">${setup.groups.map(g=>`C${g.court}`).join(', ')}</span></div>`;
+    showModal('modal-lock-confirm');
+}
+
+async function lockWeek() {
+    closeModal('modal-lock-confirm');
+    if (!activeWeek) return;
+    try {
+        const ts=firebase.firestore.FieldValue.serverTimestamp(), batch=db.batch();
+        batch.update(db.collection('weeks').doc(activeWeek.id),{status:'active',groupCount:setup.groups.length,lockedAt:ts});
+        setup.groups.forEach((g,i)=>{
+            const docId=`${activeWeek.id}_${i}`;
+            const series=SERIES_DEF.map(sc=>({
+                num:sc.num, team1:sc.team1, team2:sc.team2, winner:null,
+                games:[
+                    {num:1,t1Score:null,t2Score:null,available:true},
+                    {num:2,t1Score:null,t2Score:null,available:true},
+                    {num:3,t1Score:null,t2Score:null,available:false}
+                ]
+            }));
+            batch.set(db.collection('weekGroups').doc(docId),{
+                weekId:activeWeek.id, groupIndex:i, court:g.court,
+                players:g.players, series, status:'pending'
+            });
+        });
+        await batch.commit();
+        setup.step=null;
+        setView('this-week');
+    } catch(e) { alert('Error locking week: '+e.message); }
+}
+
+async function promptEditWeekNum() {
+    if (!activeWeek) return;
+    const val = prompt(`Change week number (currently ${activeWeek.weekNumber}):`, activeWeek.weekNumber);
+    const num = parseInt(val);
+    if (!val || isNaN(num) || num < 1) return;
+    await db.collection('weeks').doc(activeWeek.id).update({ weekNumber: num });
+}
+
+async function endWeek() {
+    if (!confirm('Mark Week '+activeWeek.weekNumber+' as complete?')) return;
+    const ts = firebase.firestore.FieldValue.serverTimestamp();
+    const stats = computeStats();
+    const absentPlayerIds = subRequests.map(s => s.playerId);
+
+    // Save this week's results with enhanced stats
+    const thisWeekResult = {
+        weekNumber: activeWeek.weekNumber,
+        completedAt: ts,
+        players: stats.map(s => ({ id:s.id, name:s.name, gw:s.gw, gl:s.gl, sw:s.sw, sl:s.sl||0, pf:s.pf, pa:s.pa, lp:s.lp })),
+        absentPlayerIds,
+        rankings: [] // filled below after season totals computed
+    };
+
+    // Temporarily add this result to compute season totals (it isn't in weekResults yet)
+    const allResults = [...weekResults.filter(wr => wr.id !== activeWeek.id), { id: activeWeek.id, ...thisWeekResult }];
+    const seasonTotals = computeSeasonTotalsFrom(allResults);
+
+    // Determine previous week's rankings for movement indicators
+    const prevWeekResult = weekResults.filter(wr => wr.weekNumber < activeWeek.weekNumber)
+        .sort((a,b) => b.weekNumber - a.weekNumber)[0];
+    const prevRankMap = {};
+    if (prevWeekResult?.rankings) {
+        prevWeekResult.rankings.forEach(r => { prevRankMap[r.id] = r.rank; });
+    }
+
+    // Build rankings snapshot
+    thisWeekResult.rankings = seasonTotals.map((p, i) => ({
+        id: p.id, rank: i + 1, prevRank: prevRankMap[p.id] || null
+    }));
+
+    // Batch write: complete week, save results, sync rankings to shared players collection
+    const batch = db.batch();
+    batch.update(db.collection('weeks').doc(activeWeek.id), { status: 'complete' });
+    batch.set(db.collection('weekResults').doc(activeWeek.id), thisWeekResult);
+    seasonTotals.forEach((p, i) => {
+        batch.update(db.collection('players').doc(p.id), { currentRank: i + 1 });
+    });
+    batch.set(db.collection('config').doc('season'), {
+        currentWeek: activeWeek.weekNumber, lastUpdated: ts
+    }, { merge: true });
+    await batch.commit();
+    setView('this-week');
+}
+
+// Compute season totals from a provided array of weekResult docs (used by endWeek before save)
+function computeSeasonTotalsFrom(results) {
+    const playerMap = {};
+    results.forEach(wr => {
+        wr.players.forEach(p => {
+            if (!playerMap[p.id]) playerMap[p.id] = { id:p.id, name:p.name, gw:0, gl:0, sw:0, sl:0, pf:0, pa:0, lp:0, absences:0, weeks:{} };
+            const m = playerMap[p.id];
+            m.gw += p.gw; m.gl += p.gl; m.sw += (p.sw||0); m.sl += (p.sl||0);
+            m.pf += (p.pf||0); m.pa += (p.pa||0); m.lp += p.lp;
+            m.weeks[wr.weekNumber] = p;
+        });
+        (wr.absentPlayerIds || []).forEach(pid => {
+            if (!playerMap[pid]) {
+                const pl = players.find(p=>p.id===pid);
+                playerMap[pid] = { id:pid, name:pl?.name||'?', gw:0, gl:0, sw:0, sl:0, pf:0, pa:0, lp:0, absences:0, weeks:{} };
+            }
+            playerMap[pid].absences++;
+        });
+    });
+    const threshold = leagueSettings.absencePenaltyThreshold ?? 1;
+    const penalty   = leagueSettings.absencePenaltyPerOccurrence ?? -10;
+    const rows = Object.values(playerMap);
+    rows.forEach(p => {
+        p.absencePenalty = Math.max(0, p.absences - threshold) * penalty;
+        p.totalLP = p.lp + p.absencePenalty;
+        p.winPct  = p.gw + p.gl > 0 ? p.gw / (p.gw + p.gl) : 0;
+        p.diff    = p.pf - p.pa;
+    });
+    return rows.sort((a,b) => b.totalLP!==a.totalLP ? b.totalLP-a.totalLP : b.gw-a.gw);
+}
+
+// Recompute a specific week's results from raw weekGroups data (for retroactive edits)
+async function recomputeWeekResults(weekId) {
+    const snap = await db.collection('weekGroups').where('weekId','==',weekId).get();
+    const groups = snap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>a.groupIndex-b.groupIndex);
+    const stats = computeStats(groups);
+
+    // Preserve absentPlayerIds from existing weekResults doc
+    const existing = weekResults.find(wr => wr.id === weekId);
+    const absentPlayerIds = existing?.absentPlayerIds || [];
+    const weekNumber = existing?.weekNumber || 0;
+
+    const updatedResult = {
+        weekNumber,
+        completedAt: existing?.completedAt || firebase.firestore.FieldValue.serverTimestamp(),
+        players: stats.map(s => ({ id:s.id, name:s.name, gw:s.gw, gl:s.gl, sw:s.sw, sl:s.sl||0, pf:s.pf, pa:s.pa, lp:s.lp })),
+        absentPlayerIds,
+        rankings: [] // filled by resyncRankings
+    };
+    await db.collection('weekResults').doc(weekId).set(updatedResult);
+    await resyncRankings();
+}
+
+// Recompute season totals and sync rankings to shared players collection
+async function resyncRankings() {
+    // Re-fetch weekResults to get latest
+    const wrSnap = await db.collection('weekResults').orderBy('weekNumber').get();
+    const allResults = wrSnap.docs.map(d => ({id:d.id,...d.data()}));
+    const seasonTotals = computeSeasonTotalsFrom(allResults);
+
+    const ts = firebase.firestore.FieldValue.serverTimestamp();
+    const batch = db.batch();
+
+    // Update rankings on the most recent weekResult
+    const latest = allResults[allResults.length - 1];
+    if (latest) {
+        const prevResult = allResults.length > 1 ? allResults[allResults.length - 2] : null;
+        const prevRankMap = {};
+        if (prevResult?.rankings) prevResult.rankings.forEach(r => { prevRankMap[r.id] = r.rank; });
+        const rankings = seasonTotals.map((p, i) => ({ id: p.id, rank: i + 1, prevRank: prevRankMap[p.id] || null }));
+        batch.update(db.collection('weekResults').doc(latest.id), { rankings });
+    }
+
+    // Sync currentRank to shared players collection
+    seasonTotals.forEach((p, i) => {
+        batch.update(db.collection('players').doc(p.id), { currentRank: i + 1 });
+    });
+    batch.set(db.collection('config').doc('season'), {
+        currentWeek: latest?.weekNumber || seasonConfig.currentWeek, lastUpdated: ts
+    }, { merge: true });
+    await batch.commit();
+}
+
+// ================================================================
+//  ADMIN: SUB REQUESTS
+// ================================================================
+async function addSubReq() {
+    if (!activeWeek) return;
+    const sel=document.getElementById('sub-player-sel');
+    const reason=document.getElementById('sub-reason-inp').value.trim();
+    const pid=sel.value, pname=sel.options[sel.selectedIndex]?.dataset.name||'';
+    if (!pid) { alert('Select a player.'); return; }
+    await db.collection('subRequests').add({
+        weekId:activeWeek.id, weekNumber:activeWeek.weekNumber,
+        playerId:pid, playerName:pname, reason,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('sub-player-sel').value='';
+    document.getElementById('sub-reason-inp').value='';
+}
+async function deleteSubReq(id) { await db.collection('subRequests').doc(id).delete(); }
+
+function showNukeConfirm() { showModal('modal-nuke-confirm'); }
+async function nukeAllData() {
+    closeModal('modal-nuke-confirm');
+    for (const col of ['weeks','weekGroups','subRequests','weekResults','scoreEdits']) {
+        const snap = await db.collection(col).get();
+        if (snap.docs.length) {
+            const batch = db.batch();
+            snap.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+        }
+    }
+    await db.collection('config').doc('season').delete();
+}
+
+async function saveInitialRankings() {
+    const batch = db.batch();
+    let count = 0;
+    playersOnly().forEach(p => {
+        const input = document.getElementById(`irank-${p.id}`);
+        if (!input) return;
+        const rank = parseInt(input.value);
+        if (!isNaN(rank) && rank > 0) {
+            batch.update(db.collection('players').doc(p.id), { currentRank: rank });
+            count++;
+        }
+    });
+    if (count === 0) { alert('Enter at least one ranking.'); return; }
+    await batch.commit();
+    renderAdmin();
+}
+
+let _howOpen = false;
+let _editLogOpen = false;
+
+async function saveLeagueSettings() {
+    const threshold = parseInt(document.getElementById('setting-abs-threshold')?.value) ?? 1;
+    const penalty   = parseInt(document.getElementById('setting-abs-penalty')?.value) ?? -10;
+    await db.collection('config').doc('leagueSettings').set({
+        absencePenaltyThreshold: threshold,
+        absencePenaltyPerOccurrence: penalty
+    });
+}
+function toggleHowItWorks() {
+    _howOpen = !_howOpen;
+    document.getElementById('how-it-works').classList.toggle('hidden', !_howOpen);
+    document.getElementById('how-chevron').innerHTML = _howOpen ? '&#9650;' : '&#9660;';
+}
+
+// ================================================================
+//  ADMIN LOGIN
+// ================================================================
+function showAdminLogin() {
+    document.getElementById('admin-pwd').value='';
+    document.getElementById('admin-pwd-err').classList.add('hidden');
+    showModal('modal-admin-login');
+    setTimeout(()=>document.getElementById('admin-pwd').focus(),100);
+}
+function attemptLogin() {
+    if (document.getElementById('admin-pwd').value===ADMIN_PASSWORD) {
+        isAdmin=true; closeModal('modal-admin-login'); renderAdmin();
+    } else { document.getElementById('admin-pwd-err').classList.remove('hidden'); }
+}
+
+// ================================================================
+//  HELPERS
+// ================================================================
+const playersOnly = ()  => players.filter(p=>p.type==='player');
+const subsOnly    = ()  => players.filter(p=>p.type==='sub');
+function showModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+document.addEventListener('click',e=>{
+    document.querySelectorAll('[id^="modal-"]').forEach(m=>{
+        if(!m.classList.contains('hidden')&&e.target===m) closeModal(m.id);
+    });
+});
+function emptyState(t,b) { return `<div class="card p-8 text-center"><p class="font-bold text-slate-300 mb-1">${t}</p><p class="text-sm text-slate-500">${b}</p></div>`; }
+
+// Short display name — adds last initial when duplicate first names exist in the group
+function shortName(fullName, allNames) {
+    const first = fullName.split(' ')[0];
+    const dupes = allNames.filter(n => n.split(' ')[0] === first);
+    if (dupes.length > 1) {
+        const last = fullName.split(' ').slice(1).join(' ');
+        return last ? `${first} ${last[0]}.` : first;
+    }
+    return first;
+}
+function lastShortName(fullName, allNames) {
+    const last = fullName.split(' ').pop();
+    const dupes = allNames.filter(n => n.split(' ').pop() === last);
+    if (dupes.length > 1) {
+        const first = fullName.split(' ')[0];
+        return `${first[0]}. ${last}`;
+    }
+    return last;
+}
+
+// ================================================================
+//  THEME TOGGLE — cycle dark → light → cyberpunk → dark
+// ================================================================
+const THEME_ORDER = ['dark','light','cyberpunk'];
+function currentTheme() {
+    const c = document.documentElement.classList;
+    if (c.contains('light')) return 'light';
+    if (c.contains('cyberpunk')) return 'cyberpunk';
+    return 'dark';
+}
+function updateThemeIcon() {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    const now = currentTheme();
+    const next = THEME_ORDER[(THEME_ORDER.indexOf(now) + 1) % THEME_ORDER.length];
+    const icons = { dark:'☀', light:'⚡', cyberpunk:'☾' };
+    const titles = { dark:'Switch to light mode', light:'Switch to cyberpunk mode', cyberpunk:'Switch to dark mode' };
+    btn.innerHTML = icons[next];
+    btn.title = titles[now];
+}
+function toggleTheme() {
+    const now = currentTheme();
+    const next = THEME_ORDER[(THEME_ORDER.indexOf(now) + 1) % THEME_ORDER.length];
+    document.documentElement.classList.remove('light','cyberpunk');
+    if (next !== 'dark') document.documentElement.classList.add(next);
+    localStorage.setItem('bbpl-theme', next);
+    updateThemeIcon();
+}
+
+// ================================================================
+//  INIT
+// ================================================================
+window.addEventListener('DOMContentLoaded',async()=>{
+    updateThemeIcon();
+    setView('this-week');
+    await authReady;
+    startListeners();
+});
+</script>
+</body>
+</html>

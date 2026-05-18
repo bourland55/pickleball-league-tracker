@@ -1,0 +1,25 @@
+# Each fork has its own config — keep yours private
+config.js
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor metadata
+.vscode/
+.idea/
+*.swp
+*~
+
+# Node (only if you use the Firebase CLI)
+node_modules/
+.firebase/
+firebase-debug.log
+*.firebaserc.local
+.env
+.env.local
+
+# Local data backups
+*.bak
+*-backup.*

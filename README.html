@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Games — Tournament Template</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<style>
+  :root[data-theme="dark"] {
+    --bg-deep:        #0A0F1A;
+    --bg-surface:     #131A2A;
+    --bg-elevated:    #1A2238;
+    --bg-card:        #161E2E;
+    --border-subtle:  rgba(255, 255, 255, 0.08);
+    --border-strong:  rgba(255, 255, 255, 0.16);
+    --sage-green:     #63DF4E;
+    --sage-green-soft:rgba(99, 223, 78, 0.15);
+    --sage-green-dim: rgba(99, 223, 78, 0.4);
+    --ice-blue:       #52B8FF;
+    --ice-blue-soft:  rgba(82, 184, 255, 0.15);
+    --text-primary:   #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-tertiary:  rgba(255, 255, 255, 0.45);
+    --danger:         #FF6B6B;
+    --shadow-glow:    0 0 60px rgba(99, 223, 78, 0.10);
+  }
+  :root[data-theme="light"] {
+    --bg-deep:        #F5F7FA;
+    --bg-surface:     #FFFFFF;
+    --bg-elevated:    #EEF1F6;
+    --bg-card:        #FFFFFF;
+    --border-subtle:  rgba(15, 25, 50, 0.08);
+    --border-strong:  rgba(15, 25, 50, 0.18);
+    --sage-green:     #1FA844;
+    --sage-green-soft:rgba(31, 168, 68, 0.12);
+    --sage-green-dim: rgba(31, 168, 68, 0.4);
+    --ice-blue:       #1F7AC2;
+    --ice-blue-soft:  rgba(31, 122, 194, 0.12);
+    --text-primary:   #0B1426;
+    --text-secondary: rgba(11, 20, 38, 0.72);
+    --text-tertiary:  rgba(11, 20, 38, 0.5);
+    --danger:         #C73838;
+    --shadow-glow:    0 6px 30px rgba(11, 20, 38, 0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; max-width: 1480px; margin: 0 auto; }
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--bg-surface); border-right: 1px solid var(--border-subtle);
+    padding: 24px 18px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px 18px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 14px; }
+  .brand-mark { font-size: 22px; color: var(--sage-green); text-shadow: 0 0 18px var(--sage-green-dim); }
+  .brand-text {
+    font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--sage-green) 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .nav-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); padding: 14px 10px 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    background: transparent; border: none; border-left: 2px solid transparent;
+    color: var(--text-secondary); padding: 8px 10px; border-radius: 6px;
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer; text-align: left; text-decoration: none;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  }
+  .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .nav-item.active { background: var(--sage-green-soft); border-left-color: var(--sage-green); color: var(--sage-green); }
+  .nav-num { font-size: 10px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text-tertiary); width: 18px; }
+  .nav-item.active .nav-num { color: var(--sage-green); opacity: 0.7; }
+  .theme-toggle {
+    margin-top: auto; background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    color: var(--text-secondary); padding: 10px 12px; border-radius: 10px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .theme-toggle:hover { border-color: var(--sage-green); color: var(--sage-green); }
+
+  .main { padding: 56px 56px 120px; min-width: 0; max-width: 980px; }
+  .doc-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--border-subtle); }
+  .doc-badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    color: var(--ice-blue); background: var(--ice-blue-soft); padding: 4px 10px; border-radius: 5px;
+    margin-bottom: 16px; font-family: ui-monospace, monospace;
+  }
+  .doc-title { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 14px; }
+  .doc-subtitle { color: var(--text-secondary); font-size: 17px; }
+
+  /* Hero CTA */
+  .hero-cta {
+    margin: 32px 0;
+    padding: 28px 28px;
+    background: linear-gradient(135deg, var(--sage-green-soft) 0%, var(--ice-blue-soft) 100%);
+    border: 1px solid var(--sage-green);
+    border-radius: 16px;
+    box-shadow: var(--shadow-glow);
+  }
+  .hero-cta-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sage-green); margin-bottom: 10px; }
+  .hero-cta-prompt {
+    background: var(--bg-deep); border: 1px solid var(--sage-green); border-radius: 10px;
+    padding: 14px 18px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 16px; color: var(--sage-green); font-weight: 700;
+    box-shadow: inset 0 0 12px rgba(99, 223, 78, 0.06);
+  }
+  .hero-cta-detail { color: var(--text-secondary); font-size: 14px; margin-top: 12px; }
+
+  section { scroll-margin-top: 24px; margin-bottom: 56px; }
+  section h2 {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.015em;
+    margin: 0 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle);
+    display: flex; align-items: center; gap: 12px;
+  }
+  section h2 .section-num {
+    font-size: 14px; font-family: ui-monospace, monospace; color: var(--sage-green);
+    background: var(--sage-green-soft); padding: 3px 8px; border-radius: 5px; font-weight: 600;
+  }
+  section h3 { font-size: 18px; font-weight: 600; color: var(--ice-blue); margin: 28px 0 12px; }
+  section h4 { font-size: 14px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text-secondary); margin: 22px 0 10px; }
+  section p { font-size: 15px; line-height: 1.65; margin: 0 0 14px; }
+  section ul, section ol { margin: 0 0 16px 22px; }
+  section li { font-size: 15px; margin-bottom: 6px; }
+  section a { color: var(--sage-green); text-decoration: underline; text-underline-offset: 2px; }
+  section strong { color: var(--text-primary); font-weight: 600; }
+  section code {
+    font-family: ui-monospace, monospace; font-size: 0.88em;
+    background: var(--bg-elevated); color: var(--sage-green);
+    padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);
+  }
+  section pre {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: 10px; padding: 16px 18px; margin: 14px 0; overflow-x: auto;
+    font-size: 13px; line-height: 1.55;
+  }
+  section pre code { background: transparent; border: none; padding: 0; color: var(--text-primary); }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 10px; overflow: hidden; }
+  th, td { border-bottom: 1px solid var(--border-subtle); padding: 10px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-elevated); font-weight: 600; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); }
+  tr:last-child td { border-bottom: none; }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin: 14px 0; }
+  .feature-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px; }
+  .feature-card h4 { font-size: 13px; margin: 0 0 8px; color: var(--sage-green); }
+  .feature-card p { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.55; }
+
+  .callout { background: var(--bg-card); border: 1px solid var(--border-subtle); border-left: 3px solid var(--sage-green); border-radius: 10px; padding: 16px 20px; margin: 18px 0; }
+  .callout-ice { border-left-color: var(--ice-blue); }
+  .callout-title { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sage-green); margin-bottom: 6px; }
+  .callout-ice .callout-title { color: var(--ice-blue); }
+
+  .screenshots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 14px 0; }
+  .screenshot {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: 10px; overflow: hidden; aspect-ratio: 9 / 16;
+    display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-size: 12px; text-align: center; padding: 12px;
+  }
+  .screenshot img { width: 100%; height: 100%; object-fit: cover; }
+
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+    .main { padding: 32px 24px 80px; }
+    .doc-title { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <span class="brand-text">Weekly Games</span>
+    </div>
+    <div class="nav-section-label">Start Here</div>
+    <a href="#hero" class="nav-item"><span class="nav-num">00</span>Overview</a>
+    <a href="#quickstart" class="nav-item"><span class="nav-num">01</span>Quick Start</a>
+    <a href="#what-you-get" class="nav-item"><span class="nav-num">02</span>What You Get</a>
+    <a href="#screenshots" class="nav-item"><span class="nav-num">03</span>Screenshots</a>
+
+    <div class="nav-section-label">Setup</div>
+    <a href="#manual-install" class="nav-item"><span class="nav-num">04</span>Manual Install</a>
+    <a href="#customize" class="nav-item"><span class="nav-num">05</span>Customize</a>
+    <a href="#deploy" class="nav-item"><span class="nav-num">06</span>Deploy</a>
+
+    <div class="nav-section-label">Reference</div>
+    <a href="#whats-included" class="nav-item"><span class="nav-num">07</span>What's Included</a>
+    <a href="#tech-stack" class="nav-item"><span class="nav-num">08</span>Tech Stack</a>
+    <a href="#sport-scope" class="nav-item"><span class="nav-num">09</span>Sport Scope</a>
+    <a href="#license" class="nav-item"><span class="nav-num">10</span>License &amp; Credits</a>
+
+    <button class="theme-toggle" id="themeToggle">
+      <span id="themeIcon">☀</span>
+      <span id="themeLabel">Light mode</span>
+    </button>
+  </aside>
+
+  <main class="main">
+
+    <header class="doc-header" id="hero">
+      <div class="doc-badge">OPEN SOURCE TEMPLATE</div>
+      <h1 class="doc-title">Run a Weekly Tournament. No Coding Required.</h1>
+      <p class="doc-subtitle">A complete, customizable scoresheet app for your weekly pickleball (or ping-pong, or doubles tennis) league. Live scoring on phones. Season standings. Audit trail. Three themes. Zero build step.</p>
+    </header>
+
+    <div class="hero-cta">
+      <div class="hero-cta-label">▸ Quick start with Claude Code</div>
+      <div class="hero-cta-prompt">"let's get started"</div>
+      <div class="hero-cta-detail">Open this folder in <a href="https://claude.com/code" target="_blank">Claude Code</a> and type the line above. The setup wizard walks you through naming your league, picking a brand color, uploading a logo, choosing solo or multi-user mode, and deploying — about 10-15 minutes, no manual editing required.</div>
+    </div>
+
+    <section id="quickstart">
+      <h2><span class="section-num">01</span>Quick Start</h2>
+      <p>Three paths, easiest to fanciest:</p>
+      <table>
+        <thead><tr><th>Path</th><th>Setup time</th><th>What it gives you</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Claude Code wizard</strong></td><td>10-15 min</td><td>Guided setup, no manual editing, walks you through Firebase if you want multi-user mode, helps deploy</td></tr>
+          <tr><td><strong>Manual + solo mode</strong></td><td>2 min</td><td>Edit <code>config.js</code>, open <code>index.html</code>. Works offline on one device.</td></tr>
+          <tr><td><strong>Manual + multi-user</strong></td><td>20 min</td><td>Edit <code>config.js</code>, create a Firebase project, deploy. Everyone in your league sees live scores on their phone.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="what-you-get">
+      <h2><span class="section-num">02</span>What You Get</h2>
+      <div class="feature-grid">
+        <div class="feature-card"><h4>📅 This Week</h4><p>Set up the week's roster, assign players to courts in groups of 4, lock the schedule. Live as players arrive.</p></div>
+        <div class="feature-card"><h4>🏓 Live Court Scoring</h4><p>Score entry per game, per series. Auto-detects winners, "PICKLED" 11-0 shutouts, in-progress vs. complete.</p></div>
+        <div class="feature-card"><h4>📊 Leaderboard</h4><p>Per-week standings with rank deltas, game log, edit audit history. Filter by completed week.</p></div>
+        <div class="feature-card"><h4>🏆 Season Standings</h4><p>Cumulative wins, points, absence-adjusted totals. Week-by-week heatmap. Absence tracking with penalty rules.</p></div>
+        <div class="feature-card"><h4>🛠 Admin Tools</h4><p>Roster management, week setup wizard, score audit log with reason-tagged edits, league settings.</p></div>
+        <div class="feature-card"><h4>🎨 Three Themes</h4><p>Dark, light, and a glowing <strong>cyberpunk</strong> mode. One-click toggle, persists across sessions.</p></div>
+        <div class="feature-card"><h4>📱 Mobile-first</h4><p>Designed for entering scores from a phone next to the court. Big tap targets, no fiddling.</p></div>
+        <div class="feature-card"><h4>🔄 Live Multi-user Sync</h4><p>Optional Firebase mode means everyone sees scores update in real time on their own device.</p></div>
+        <div class="feature-card"><h4>🏠 Or Just Solo</h4><p>No setup, no internet, no Firebase. Just open <code>index.html</code> and play. Browser storage handles it.</p></div>
+      </div>
+    </section>
+
+    <section id="screenshots">
+      <h2><span class="section-num">03</span>Screenshots</h2>
+      <p>Drop your own screenshots into <code>assets/screenshots/</code> after you've branded the app. Here's the layout:</p>
+      <div class="screenshots">
+        <div class="screenshot"><img src="assets/screenshots/01-this-week.png" alt="This Week tab" onerror="this.style.display='none';this.parentElement.textContent='This Week — assets/screenshots/01-this-week.png';"></div>
+        <div class="screenshot"><img src="assets/screenshots/02-courts.png" alt="Courts" onerror="this.style.display='none';this.parentElement.textContent='Courts — assets/screenshots/02-courts.png';"></div>
+        <div class="screenshot"><img src="assets/screenshots/03-leaderboard.png" alt="Leaderboard" onerror="this.style.display='none';this.parentElement.textContent='Leaderboard — assets/screenshots/03-leaderboard.png';"></div>
+        <div class="screenshot"><img src="assets/screenshots/04-season.png" alt="Season" onerror="this.style.display='none';this.parentElement.textContent='Season — assets/screenshots/04-season.png';"></div>
+        <div class="screenshot"><img src="assets/screenshots/05-admin.png" alt="Admin" onerror="this.style.display='none';this.parentElement.textContent='Admin — assets/screenshots/05-admin.png';"></div>
+        <div class="screenshot"><img src="assets/screenshots/06-cyberpunk.png" alt="Cyberpunk theme" onerror="this.style.display='none';this.parentElement.textContent='Cyberpunk Theme — assets/screenshots/06-cyberpunk.png';"></div>
+      </div>
+    </section>
+
+    <section id="manual-install">
+      <h2><span class="section-num">04</span>Manual Install</h2>
+      <p>If you'd rather skip Claude Code:</p>
+      <ol>
+        <li>Copy <code>config.example.js</code> → <code>config.js</code></li>
+        <li>Edit the values in <code>config.js</code> (league name, brand color, logo, admin password, storage mode)</li>
+        <li>Solo mode: open <code>index.html</code>. Done.</li>
+        <li>Multi-user mode: follow <a href="docs/FIREBASE_SETUP.html">FIREBASE_SETUP</a> (or the .md version), then open <code>index.html</code>.</li>
+      </ol>
+      <p>Full guide: <a href="docs/INSTALL.md"><code>docs/INSTALL.md</code></a></p>
+    </section>
+
+    <section id="customize">
+      <h2><span class="section-num">05</span>Customize</h2>
+      <p>One file controls almost everything: <code>config.js</code>.</p>
+<pre><code>window.LEAGUE_CONFIG = {
+    leagueName:  "Tuesday Night Pickle Crew",
+    sport:       "Pickleball",
+    logoSrc:     "assets/logo.png",
+    brandColor:  "#22c55e",
+    storageMode: "local",
+    adminPassword: "changeme",
+    // ... see config.example.js for the full list
+};</code></pre>
+      <div class="callout">
+        <div class="callout-title">Quick palette swaps</div>
+        <p style="margin:0">Try <code>#3b82f6</code> (blue) · <code>#8b5cf6</code> (purple) · <code>#f59e0b</code> (orange) · <code>#ef4444</code> (red) · <code>#14b8a6</code> (teal) · <code>#ec4899</code> (pink). Or any 6-digit hex.</p>
+      </div>
+      <p>For deeper changes (new tabs, custom scoring, additional features), open this folder in Claude Code and ask. See <a href="docs/PROMPTS.md"><code>docs/PROMPTS.md</code></a> for ready-to-paste prompts.</p>
+    </section>
+
+    <section id="deploy">
+      <h2><span class="section-num">06</span>Deploy</h2>
+      <p>Get a public URL so your league can score from their phones.</p>
+      <table>
+        <thead><tr><th>Host</th><th>Time</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td><strong>tiiny.host</strong></td><td>30 sec</td><td>Easiest, drag-and-drop, free, no account needed</td></tr>
+          <tr><td><strong>GitHub Pages</strong></td><td>5 min</td><td>Free forever, version-controlled, professional</td></tr>
+          <tr><td><strong>Vercel</strong></td><td>2 min</td><td>Polished platform, custom domains free</td></tr>
+        </tbody>
+      </table>
+      <p>Full walkthrough: <a href="docs/DEPLOY.md"><code>docs/DEPLOY.md</code></a></p>
+      <div class="callout callout-ice">
+        <div class="callout-title">Heads up — Firebase mode</div>
+        <p style="margin:0">After deploying, add your deployment URL to Firebase Console → Authentication → Settings → Authorized domains. Otherwise users will see "permission denied" errors.</p>
+      </div>
+    </section>
+
+    <section id="whats-included">
+      <h2><span class="section-num">07</span>What's Included</h2>
+<pre><code>pickleball-league-tracker/
+├── index.html                    ← the app (~1800 lines, no build step)
+├── config.example.js              ← copy → config.js, edit, done
+├── firestore.rules                ← Firebase security rules (multi-user mode)
+├── assets/
+│   ├── logo.png                    ← swap with yours
+│   ├── favicon.svg                 ← swap with yours
+│   └── screenshots/                ← drop in your own screenshots
+├── .claude/skills/                 ← Claude Code skills (the setup wizard)
+│   ├── getting-started.md          ← "let's get started" — the flagship
+│   ├── customize-branding.md       ← re-skin after install
+│   ├── firebase-setup.md           ← multi-user mode walkthrough
+│   ├── deploy.md                   ← deployment helper
+│   └── troubleshoot.md             ← debug common issues
+└── docs/
+    ├── INSTALL.md
+    ├── CUSTOMIZE.md
+    ├── PROMPTS.md
+    ├── FIREBASE_SETUP.md
+    └── DEPLOY.md</code></pre>
+    </section>
+
+    <section id="tech-stack">
+      <h2><span class="section-num">08</span>Tech Stack</h2>
+      <ul>
+        <li><strong>Pure HTML + JavaScript</strong> — no build step, no framework runtime, no <code>npm install</code></li>
+        <li><strong>Tailwind CSS via CDN</strong> for styling</li>
+        <li><strong>Firebase Web SDK v9 (compat)</strong> — optional, only used in multi-user mode</li>
+        <li><strong>Total weight</strong>: ~70KB compressed. Loads on cellular in &lt;2 seconds.</li>
+      </ul>
+      <p>The app works fully offline in <strong>solo mode</strong>. In <strong>multi-user mode</strong> it needs an internet connection to sync with Firebase.</p>
+    </section>
+
+    <section id="sport-scope">
+      <h2><span class="section-num">09</span>Sport Scope</h2>
+      <p>Out of the box, this template is built around <strong>pickleball-style mechanics</strong>: 11-point games, 4-player doubles with a 3-series rotation. Easy to rename for any 2v2 sport with similar rules (ping-pong doubles, padel, doubles tennis to 11).</p>
+      <p>For different formats (singles, 3v3, custom rotations), you'd need code changes — open the folder in Claude Code and describe what you want.</p>
+    </section>
+
+    <section id="license">
+      <h2><span class="section-num">10</span>License &amp; Credits</h2>
+      <p><strong>MIT.</strong> Use it, fork it, customize it, redistribute it. Attribution appreciated but not required.</p>
+      <p>Originally built for the <strong>Bill Buckners Pickleball League</strong> by Dave Bourland. Open-sourced so any league can use it.</p>
+      <p>If you build something cool with it, I'd love to see it — open an issue on the repo.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const icon = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    icon.textContent = theme === 'dark' ? '☀' : '☾';
+    label.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+  }
+  applyTheme(localStorage.getItem('readme-theme') || 'dark');
+  toggle.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('readme-theme', next);
+    applyTheme(next);
+  });
+
+  // Active section on scroll
+  const sections = document.querySelectorAll('section[id], header[id]');
+  const navLinks = document.querySelectorAll('.nav-item');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -65% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+      if (href?.startsWith('#')) {
+        e.preventDefault();
+        document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
